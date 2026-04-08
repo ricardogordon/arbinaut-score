@@ -18,11 +18,11 @@
   <meta name="twitter:image" content="https://arbinaut-score.vercel.app/og-image.jpg" />
 
   <!-- ============================================================
-       Paste your free Groq API key below (console.groq.com)
+       Paste your OpenAI API key below (platform.openai.com/api-keys)
        TwitterAPI.io key is stored safely in Vercel environment variables
   ============================================================ -->
   <script>
-    const GROQ_API_KEY = "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";
+    const OPENAI_API_KEY = "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";
   </script>
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -551,7 +551,7 @@
     </div>
 
     <footer class="footer">
-      built by <a href="https://twitter.com/Ricardo__Gordon" target="_blank" rel="noopener" style="color:inherit;text-decoration:underline;text-underline-offset:3px;opacity:0.8;">@Ricardo__Gordon</a> for the Arbitrum community &nbsp;·&nbsp; powered by TwitterAPI.io + Groq
+      built by <a href="https://twitter.com/Ricardo__Gordon" target="_blank" rel="noopener" style="color:inherit;text-decoration:underline;text-underline-offset:3px;opacity:0.8;">@Ricardo__Gordon</a> for the Arbitrum community &nbsp;·&nbsp; powered by TwitterAPI.io + OpenAI
     </footer>
 
   </div>
@@ -585,8 +585,8 @@
         return;
       }
 
-      if (!GROQ_API_KEY || GROQ_API_KEY === 'YOUR_GROQ_API_KEY_HERE') {
-        errorEl.textContent = 'Groq API key not set. Open index.html and add your key.';
+      if (!OPENAI_API_KEY || OPENAI_API_KEY === 'YOUR_OPENAI_API_KEY_HERE') {
+        errorEl.textContent = 'OpenAI API key not set. Open index.html and add your key.';
         errorEl.classList.add('visible');
         return;
       }
@@ -724,14 +724,14 @@ Return ONLY JSON:
 
         async function callGroq(prompt, retries = 2) {
           for (let i = 0; i <= retries; i++) {
-            const r = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+            const r = await fetch('https://api.openai.com/v1/chat/completions', {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
-                'Authorization': 'Bearer ' + GROQ_API_KEY
+                'Authorization': 'Bearer ' + OPENAI_API_KEY
               },
               body: JSON.stringify({
-                model: 'llama-3.3-70b-versatile',
+                model: 'gpt-4o-mini',
                 max_tokens: 1000,
                 temperature: 0.7,
                 messages: [{ role: 'user', content: prompt }]
