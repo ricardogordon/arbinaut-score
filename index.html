@@ -522,8 +522,8 @@
         // Search 1: all recent tweets from this user (up to 20)
         // Search 2: Arbitrum-specific tweets from this user (up to 20)
         // Cost: 2 API calls = ~$0.00015 each = $0.0003 per user check
-        // Run searches sequentially with a small gap to avoid 429 rate limits
-        async function searchWithRetry(url, retries = 2) {
+        // ── Sequential API calls with retry on 429 ──────────────────────
+        async function apiFetch(url, retries = 2) {
           for (let i = 0; i <= retries; i++) {
             try {
               const r = await fetch(url);
@@ -532,8 +532,7 @@
                 await new Promise(res => setTimeout(res, 2000 * (i + 1)));
                 continue;
               }
-              if (r.ok) return r;
-              if (i === retries) return r;
+              return r;
             } catch(e) {
               if (i === retries) throw e;
               await new Promise(res => setTimeout(res, 1500));
@@ -541,17 +540,22 @@
           }
         }
 
-        // Sequential — not parallel — to avoid hitting rate limits
-        const allRes = await searchWithRetry(`/api/search?query=from%3A${normalizedHandle}`);
-        await new Promise(res => setTimeout(res, 500));
-        const arbRes = await searchWithRetry(`/api/search?query=arbitrum%20from%3A${normalizedHandle}`);
-
-        if (!allRes.ok) {
-          throw new Error('Could not fetch tweets (' + allRes.status + '). Try again in a moment.');
-        }
-
+        // Call 1: all recent tweets
+        const allRes = await apiFetch(`/api/search?query=from%3A${normalizedHandle}`);
+        if (!allRes.ok) throw new Error('Could not fetch tweets (' + allRes.status + '). Try again in a moment.');
         const allData = await allRes.json();
+
+        await new Promise(res => setTimeout(res, 500));
+
+        // Call 2: Arbitrum-specific tweets
+        const arbRes = await apiFetch(`/api/search?query=arbitrum%20from%3A${normalizedHandle}`);
         const arbData = arbRes.ok ? await arbRes.json() : { tweets: [] };
+
+        await new Promise(res => setTimeout(res, 500));
+
+        // Call 3: user profile for bio check
+        const profileRes = await apiFetch(`/api/search?type=profile&username=${normalizedHandle}`);
+        const profileData = profileRes.ok ? await profileRes.json() : {};
 
         const allTweets = allData.tweets || [];
         const arbTweets = arbData.tweets || [];
@@ -560,17 +564,34 @@
           throw new Error('No tweets found for @' + handle + '. The account may be private or does not exist.');
         }
 
-        // Build text arrays for Groq analysis
+        // ── Extract data for scoring ──────────────────────────────────────
+        // Bio analysis
+        const userInfo = profileData.data || profileData.user || profileData || {};
+        const bio = (userInfo.description || userInfo.bio || '').toLowerCase();
+        const bioName = (userInfo.name || '').toLowerCase();
+        const arbBioKeywords = ['arbitrum', 'arb', 'nitro', 'stylus', 'orbit', 'l2', 'offchain labs'];
+        const bioMentionsArb = arbBioKeywords.some(k => bio.includes(k) || bioName.includes(k));
+        const bioArbWords = arbBioKeywords.filter(k => bio.includes(k) || bioName.includes(k));
+
+        // Tweet texts
         const allTweetTexts = allTweets
-          .map(t => (t.text || t.full_text || '').replace(/\s+/g, ' ').trim())
-          .filter(t => t.length > 5);
+          .map(t => ({ text: (t.text || t.full_text || '').replace(/\s+/g, ' ').trim(), date: t.created_at || t.createdAt || '', likes: t.likeCount || t.favorite_count || 0 }))
+          .filter(t => t.text.length > 5);
 
         const arbTweetTexts = arbTweets
-          .map(t => (t.text || t.full_text || '').replace(/\s+/g, ' ').trim())
-          .filter(t => t.length > 5);
+          .map(t => ({ text: (t.text || t.full_text || '').replace(/\s+/g, ' ').trim(), date: t.created_at || t.createdAt || '', likes: t.likeCount || t.favorite_count || 0 }))
+          .filter(t => t.text.length > 5);
 
         const tweetCount = allTweetTexts.length;
         const arbCount = arbTweetTexts.length;
+        const rawPct = tweetCount > 0 ? Math.round((arbCount / tweetCount) * 100) : 0;
+
+        // Recency: how many Arbitrum tweets in last 7 days
+        const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+        const recentArbTweets = arbTweetTexts.filter(t => {
+          if (!t.date) return false;
+          return new Date(t.date) > sevenDaysAgo;
+        }).length;
 
         setStep('scrape', 'done');
 
@@ -578,34 +599,55 @@
         setStep('analyze', 'active');
 
         const allBlock = allTweetTexts.length > 0
-          ? allTweetTexts.map((t, i) => `${i + 1}. ${t}`).join('\n')
+          ? allTweetTexts.map((t, i) => `${i + 1}. ${t.text}`).join('\n')
           : '(no recent tweets found)';
 
         const arbBlock = arbTweetTexts.length > 0
-          ? arbTweetTexts.map((t, i) => `${i + 1}. ${t}`).join('\n')
+          ? arbTweetTexts.map((t, i) => `${i + 1}. ${t.text}`).join('\n')
           : '(none)';
 
-        const prompt = `You are calculating the "Arbinaut Score" for @${handle} — a fun measure of how much they talk about the Arbitrum ecosystem on Twitter.
+        const prompt = `You are calculating the "Arbinaut Score" for @${handle} — a fun, accurate measure of how much of an Arbitrum ecosystem person they are.
 
-Here is the data:
-- Total recent tweets found: ${tweetCount}
-- Tweets that mention Arbitrum: ${arbCount}
-- Raw Arbitrum tweet percentage: ${tweetCount > 0 ? Math.round((arbCount / tweetCount) * 100) : 0}%
+Here is ALL the data you have:
 
-Sample of their recent tweets:
+TWEET DATA:
+- Total recent tweets analyzed: ${tweetCount}
+- Tweets mentioning Arbitrum: ${arbCount}
+- Raw Arbitrum tweet percentage: ${rawPct}%
+- Arbitrum tweets in the last 7 days: ${recentArbTweets} (recency signal — higher = more active recently)
+
+BIO DATA:
+- Bio mentions Arbitrum-related keywords: ${bioMentionsArb ? 'YES — keywords found: ' + bioArbWords.join(', ') : 'NO'}
+- Full bio: "${bio || 'no bio found'}"
+
+RECENT TWEETS (all topics):
 ${allBlock}
 
-Their Arbitrum-specific tweets:
+ARBITRUM-SPECIFIC TWEETS:
 ${arbBlock}
 
-Based on this data, return ONLY a valid JSON object, no markdown, no preamble:
+SCORING INSTRUCTIONS — use ALL parameters to create a unique score:
+
+1. BASE: Start from the raw Arbitrum % (${rawPct}%) mapped to 0-1000
+2. RECENCY BONUS: +50 to +150 points if they tweeted about Arbitrum in the last 7 days (${recentArbTweets} recent tweets)
+3. BIO BONUS: +50 to +100 points if their bio mentions Arbitrum keywords
+4. DEPTH BONUS/PENALTY: Adjust ±100 based on content quality:
+   - Governance, tech, ecosystem building, developer content = high depth (+50 to +100)
+   - Only price/moon talk = low depth (-50 to -100)
+   - Mix of both = neutral
+5. VARIETY BONUS: +25 to +75 if they cover multiple Arbitrum topics (price AND governance AND ecosystem AND tech)
+6. CAP at 1000, floor at 0
+
+The score MUST feel unique — two people with the same raw % but different recency/bio/depth should get noticeably different scores.
+
+Return ONLY a valid JSON object, no markdown, no preamble:
 
 {
-  "arb_percentage": <integer 0-100, the % of tweets about Arbitrum — use the raw percentage above as your base, adjust slightly based on content depth>,
-  "score": <integer 0-1000, based on arb_percentage but reward depth: price talk = low, governance/tech/ecosystem = high>,
+  "arb_percentage": <integer 0-100, use raw % as base>,
+  "score": <integer 0-1000, calculated using ALL parameters above>,
   "rank": <one of exactly: "Normie", "Lurker", "Degen-in-training", "ETH Enjoyer", "L2 Curious", "Arbinaut Apprentice", "Arbinaut", "Arbinaut OG", "Full Degen", "Arbitrum Maxi">,
-  "analysis": <2-3 sentences, playful CT-flavored. Reference specific Arbitrum topics you saw if any. If no Arbitrum tweets, roast them gently for being a normie.>,
-  "tags": <array of exactly 5 short tags (2-4 words each) describing what this person tweets about>
+  "analysis": <2-3 sentences, playful CT-flavored. Be SPECIFIC — mention actual topics, recent tweets, or their bio. Make it feel personal, not generic.>,
+  "tags": <array of exactly 5 short tags (2-4 words each) that feel unique to THIS person based on what you actually saw>
 }`;
 
         const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
