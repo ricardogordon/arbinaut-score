@@ -544,14 +544,22 @@
 
         const tweets = await apifyRes.json();
 
+        // DEBUG: log first item so we can see the field names
+        if (tweets && tweets.length > 0) {
+          console.log('Apify first item keys:', Object.keys(tweets[0]));
+          console.log('Apify first item:', JSON.stringify(tweets[0]).slice(0, 500));
+        } else {
+          console.log('Apify returned empty array');
+        }
+
         if (!tweets || tweets.length === 0) {
           throw new Error('No tweets found for @' + handle + '. The account may be private or does not exist.');
         }
 
-        // apidojo/tweet-scraper returns objects with a 'text' field
+        // Try every possible field name Twitter scrapers use
         const tweetTexts = tweets
-          .filter(t => t.text || t.full_text || t.content)
-          .map(t => (t.text || t.full_text || t.content || '').replace(/\s+/g, ' ').trim())
+          .map(t => t.text || t.full_text || t.content || t.body || t.tweet || t.tweetText || t.tweet_text || '')
+          .map(t => t.replace(/\s+/g, ' ').trim())
           .filter(t => t.length > 5)
           .slice(0, 100);
 
