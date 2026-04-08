@@ -9,12 +9,11 @@
   <meta property="og:description" content="How Arbitrum are you? Find out your score from 0 to 1000." />
 
   <!-- ============================================================
-       STEP 1: Paste your free Groq API key (console.groq.com)
-       STEP 2: Paste your TwitterAPI.io key (twitterapi.io → dashboard)
+       Paste your free Groq API key below (console.groq.com)
+       TwitterAPI.io key is stored safely in Vercel environment variables
   ============================================================ -->
   <script>
-    const GROQ_API_KEY       = "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";
-    const TWITTER_API_KEY    = "new1_12ae469703b04d23aaa7112c3b3991cd";
+    const GROQ_API_KEY = "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";
   </script>
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -506,12 +505,6 @@
         return;
       }
 
-      if (!TWITTER_API_KEY || TWITTER_API_KEY === 'YOUR_TWITTERAPIIO_KEY_HERE') {
-        errorEl.textContent = 'TwitterAPI.io key not set. Open index.html and add your key.';
-        errorEl.classList.add('visible');
-        return;
-      }
-
       errorEl.classList.remove('visible');
       currentHandle = handle;
 
@@ -528,15 +521,15 @@
         // Search 1: all recent tweets from this user (up to 20)
         // Search 2: Arbitrum-specific tweets from this user (up to 20)
         // Cost: 2 API calls = ~$0.00015 each = $0.0003 per user check
-        const headers = { 'X-API-Key': TWITTER_API_KEY };
-
+        // Calls our own Vercel serverless function (/api/search.js)
+        // which proxies to TwitterAPI.io — avoids CORS browser block
         const [allRes, arbRes] = await Promise.all([
-          fetch(`https://api.twitterapi.io/twitter/tweet/advanced_search?query=from%3A${handle}&queryType=Latest`, { headers }),
-          fetch(`https://api.twitterapi.io/twitter/tweet/advanced_search?query=arbitrum%20from%3A${handle}&queryType=Latest`, { headers })
+          fetch(`/api/search?query=from%3A${handle}`),
+          fetch(`/api/search?query=arbitrum%20from%3A${handle}`)
         ]);
 
         if (!allRes.ok) {
-          throw new Error('Could not fetch tweets (' + allRes.status + '). Check your TwitterAPI.io key.');
+          throw new Error('Could not fetch tweets (' + allRes.status + '). Check your API setup.');
         }
 
         const allData = await allRes.json();
