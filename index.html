@@ -773,21 +773,32 @@ Return ONLY a valid JSON object, no markdown, no preamble:
   "tags": <array of exactly 5 short tags (2-4 words each) unique to THIS person — never generic>
 }`;
 
-        const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer ' + GROQ_API_KEY
-          },
-          body: JSON.stringify({
-            model: 'llama-3.3-70b-versatile',
-            max_tokens: 1000,
-            temperature: 0.7,
-            messages: [{ role: 'user', content: prompt }]
-          })
-        });
+        async function callGroq(prompt, retries = 2) {
+          for (let i = 0; i <= retries; i++) {
+            const r = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + GROQ_API_KEY
+              },
+              body: JSON.stringify({
+                model: 'llama-3.3-70b-versatile',
+                max_tokens: 1000,
+                temperature: 0.7,
+                messages: [{ role: 'user', content: prompt }]
+              })
+            });
+            if (r.status === 429) {
+              if (i === retries) throw new Error('AI is busy, please try again in a few seconds.');
+              await new Promise(res => setTimeout(res, 3000 * (i + 1)));
+              continue;
+            }
+            if (!r.ok) throw new Error('Groq error: ' + r.status);
+            return r;
+          }
+        }
 
-        if (!groqRes.ok) throw new Error('Groq error: ' + groqRes.status);
+        const groqRes = await callGroq(prompt);
 
         const groqData = await groqRes.json();
         const rawText = groqData.choices[0].message.content;
