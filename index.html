@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Arbinaut Score — How Arbitrum are you?</title>
+  <meta name="description" content="Enter your Twitter handle and find out your Arbinaut score — how much of an Arbitrum degen you really are." />
+  <meta property="og:title" content="Arbinaut Score" />
+  <meta property="og:description" content="How Arbitrum are you? Find out your score from 0 to 1000." />
+
+  <!-- IMPORTANT: Replace the value below with your free Groq API key (console.groq.com) -->
+  <script>
+    const GROQ_API_KEY = "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";
+  </script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --arb-blue: #1B4DD4;
+      --arb-blue-light: #4F78E0;
+      --arb-blue-pale: #EBF0FD;
+      --arb-dark: #0A1628;
+      --arb-mid: #1A2E50;
+      --white: #FFFFFF;
+      --gray-100: #F4F6FA;
+      --gray-200: #E8ECF5;
+      --gray-400: #9BA8C0;
+      --gray-600: #5A6A85;
+      --gray-800: #2C3A52;
+      --font-display: 'Space Mono', monospace;
+      --font-body: 'DM Sans', sans-serif;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: var(--font-body);
+      background: var(--arb-dark);
+      color: var(--white);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* Background grid */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(27, 77, 212, 0.07) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(27, 77, 212, 0.07) 1px, transparent 1px);
+      background-size: 40px 40px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* Glow blobs */
+    body::after {
+      content: '';
+      position: fixed;
+      top: -200px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 700px;
+      height: 500px;
+      background: radial-gradient(ellipse, rgba(27, 77, 212, 0.25) 0%, transparent 70%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .page-wrap {
+      position: relative;
+      z-index: 1;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      padding: 3rem 1rem 4rem;
+    }
+
+    /* Header */
+    .header {
+      text-align: center;
+      margin-bottom: 2.5rem;
+      animation: fadeUp 0.6s ease both;
+    }
+
+    .logo-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      margin-bottom: 1.5rem;
+    }
+
+    .arb-logo {
+      width: 32px;
+      height: 32px;
+    }
+
+    .logo-text {
+      font-family: var(--font-display);
+      font-size: 13px;
+      color: var(--arb-blue-light);
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    .hero-title {
+      font-family: var(--font-display);
+      font-size: clamp(32px, 6vw, 54px);
+      font-weight: 700;
+      line-height: 1.1;
+      margin-bottom: 1rem;
+      letter-spacing: -0.02em;
+    }
+
+    .hero-title .accent {
+      color: var(--arb-blue-light);
+    }
+
+    .hero-sub {
+      font-size: 16px;
+      color: var(--gray-400);
+      line-height: 1.6;
+      max-width: 420px;
+      margin: 0 auto;
+    }
+
+    /* Card */
+    .card {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 20px;
+      padding: 2rem;
+      width: 100%;
+      max-width: 520px;
+      backdrop-filter: blur(12px);
+      animation: fadeUp 0.6s 0.1s ease both;
+    }
+
+    /* Input row */
+    .input-group {
+      display: flex;
+      gap: 10px;
+      align-items: stretch;
+      margin-bottom: 0.75rem;
+    }
+
+    .input-wrap {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 12px;
+      padding: 0 14px;
+      transition: border-color 0.2s;
+    }
+
+    .input-wrap:focus-within {
+      border-color: var(--arb-blue-light);
+      box-shadow: 0 0 0 3px rgba(79,120,224,0.2);
+    }
+
+    .at-sign {
+      font-family: var(--font-display);
+      font-size: 18px;
+      color: var(--gray-600);
+      margin-right: 6px;
+      flex-shrink: 0;
+    }
+
+    #handle-input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      outline: none;
+      font-family: var(--font-display);
+      font-size: 16px;
+      color: var(--white);
+      padding: 14px 0;
+    }
+
+    #handle-input::placeholder { color: var(--gray-600); }
+
+    #check-btn {
+      padding: 0 24px;
+      background: var(--arb-blue);
+      color: #fff;
+      border: none;
+      border-radius: 12px;
+      font-family: var(--font-display);
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      letter-spacing: 0.04em;
+      transition: background 0.2s, transform 0.1s;
+      white-space: nowrap;
+    }
+
+    #check-btn:hover { background: var(--arb-blue-light); }
+    #check-btn:active { transform: scale(0.97); }
+    #check-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+    .error-msg {
+      font-size: 13px;
+      color: #F87171;
+      padding-top: 6px;
+      display: none;
+    }
+    .error-msg.visible { display: block; }
+
+    /* Loading */
+    .loading-state {
+      display: none;
+      text-align: center;
+      padding: 2.5rem 0 1rem;
+    }
+    .loading-state.visible { display: block; }
+
+    .spinner {
+      width: 36px;
+      height: 36px;
+      border: 2px solid rgba(255,255,255,0.1);
+      border-top-color: var(--arb-blue-light);
+      border-radius: 50%;
+      animation: spin 0.75s linear infinite;
+      margin: 0 auto 1rem;
+    }
+
+    .loading-state p {
+      font-size: 14px;
+      color: var(--gray-400);
+      font-family: var(--font-display);
+    }
+
+    /* Result */
+    .result-section {
+      display: none;
+      margin-top: 1.5rem;
+    }
+    .result-section.visible { display: block; }
+
+    .divider {
+      border: none;
+      border-top: 1px solid rgba(255,255,255,0.07);
+      margin: 1.5rem 0;
+    }
+
+    .score-block {
+      text-align: center;
+      padding: 1rem 0;
+    }
+
+    .score-label {
+      font-family: var(--font-display);
+      font-size: 11px;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--gray-600);
+      margin-bottom: 0.5rem;
+    }
+
+    .score-number {
+      font-family: var(--font-display);
+      font-size: 86px;
+      font-weight: 700;
+      line-height: 1;
+      color: var(--white);
+      margin-bottom: 4px;
+    }
+
+    .score-number span {
+      color: var(--arb-blue-light);
+    }
+
+    .score-outof {
+      font-size: 13px;
+      color: var(--gray-600);
+      margin-bottom: 1.25rem;
+      font-family: var(--font-display);
+    }
+
+    .progress-track {
+      background: rgba(255,255,255,0.07);
+      border-radius: 999px;
+      height: 6px;
+      overflow: hidden;
+      margin: 0 auto 1rem;
+      max-width: 380px;
+    }
+
+    .progress-fill {
+      height: 100%;
+      border-radius: 999px;
+      background: linear-gradient(90deg, var(--arb-blue), var(--arb-blue-light));
+      width: 0%;
+      transition: width 1.4s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    .rank-pill {
+      display: inline-block;
+      padding: 6px 18px;
+      border-radius: 999px;
+      font-family: var(--font-display);
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    .rank-low    { background: rgba(255,255,255,0.07); color: var(--gray-400); }
+    .rank-mid    { background: rgba(27,77,212,0.2); color: var(--arb-blue-light); border: 1px solid rgba(27,77,212,0.4); }
+    .rank-high   { background: rgba(27,77,212,0.35); color: #7AA6F0; border: 1px solid rgba(27,77,212,0.6); }
+    .rank-elite  { background: var(--arb-blue); color: #fff; }
+
+    .analysis-text {
+      font-size: 15px;
+      line-height: 1.75;
+      color: rgba(255,255,255,0.75);
+      margin-bottom: 1.25rem;
+    }
+
+    .tags-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 1.5rem;
+    }
+
+    .tag {
+      font-size: 12px;
+      padding: 5px 12px;
+      border-radius: 999px;
+      font-family: var(--font-display);
+      letter-spacing: 0.03em;
+    }
+
+    .tag-arb {
+      background: rgba(27,77,212,0.18);
+      border: 1px solid rgba(79,120,224,0.35);
+      color: #7AA6F0;
+    }
+
+    .tag-neutral {
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.1);
+      color: var(--gray-400);
+    }
+
+    .share-btn {
+      width: 100%;
+      padding: 14px;
+      background: transparent;
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 12px;
+      color: #fff;
+      font-family: var(--font-display);
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      transition: background 0.2s, border-color 0.2s;
+    }
+
+    .share-btn:hover {
+      background: rgba(255,255,255,0.07);
+      border-color: rgba(255,255,255,0.3);
+    }
+
+    .footer {
+      margin-top: 3rem;
+      text-align: center;
+      font-size: 12px;
+      color: var(--gray-600);
+      font-family: var(--font-display);
+      animation: fadeUp 0.6s 0.2s ease both;
+    }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(16px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    @media (max-width: 480px) {
+      .page-wrap { padding: 2rem 1rem 3rem; }
+      .card { padding: 1.5rem; }
+      .score-number { font-size: 64px; }
+      #check-btn { padding: 0 16px; font-size: 13px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page-wrap">
+
+    <header class="header">
+      <div class="logo-row">
+        <svg class="arb-logo" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M16 2L4 9v14l12 7 12-7V9L16 2z" fill="rgba(79,120,224,0.2)" stroke="#4F78E0" stroke-width="1.5"/>
+          <path d="M16 8l-7 4v8l7 4 7-4v-8l-7-4z" fill="#4F78E0"/>
+        </svg>
+        <span class="logo-text">Arbitrum</span>
+      </div>
+      <h1 class="hero-title">What's your<br><span class="accent">Arbinaut</span> score?</h1>
+      <p class="hero-sub">Enter your Twitter/X handle and find out how much of an Arbitrum degen you really are. Scores from 0 to 1000.</p>
+    </header>
+
+    <div class="card">
+      <div class="input-group">
+        <div class="input-wrap">
+          <span class="at-sign">@</span>
+          <input id="handle-input" type="text" placeholder="yourhandle" autocomplete="off" spellcheck="false" maxlength="50" />
+        </div>
+        <button id="check-btn" onclick="checkHandle()">Check</button>
+      </div>
+      <div class="error-msg" id="error-msg">Please enter a valid Twitter/X handle.</div>
+
+      <div class="loading-state" id="loading-state">
+        <div class="spinner"></div>
+        <p>Scanning your CT presence...</p>
+      </div>
+
+      <div class="result-section" id="result-section">
+        <hr class="divider" />
+
+        <div class="score-block">
+          <div class="score-label">Arbinaut score</div>
+          <div class="score-number" id="score-display">0<span>/1000</span></div>
+          <div class="progress-track">
+            <div class="progress-fill" id="progress-fill"></div>
+          </div>
+          <div class="rank-pill" id="rank-pill"></div>
+        </div>
+
+        <hr class="divider" />
+
+        <p class="analysis-text" id="analysis-text"></p>
+        <div class="tags-row" id="tags-row"></div>
+
+        <button class="share-btn" id="share-btn">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <path d="M22 4s-.7 2.1-2 3.4c1.6 10-9.4 17.3-18 11.6 2.2.1 4.4-.6 6-2C3 15.5.5 9.6 3 5c2.2 2.6 5.6 4.1 9 4-.9-4.2 4-6.6 7-3.8 1.1 0 3-1.2 3-1.2z"/>
+          </svg>
+          Share your Arbinaut score
+        </button>
+      </div>
+    </div>
+
+    <footer class="footer">
+      built for the Arbitrum community &nbsp;·&nbsp; powered by Groq AI
+    </footer>
+
+  </div>
+
+  <script>
+    let currentHandle = '';
+
+    async function checkHandle() {
+      const input = document.getElementById('handle-input');
+      const handle = input.value.replace('@', '').trim();
+      const errorEl = document.getElementById('error-msg');
+
+      if (!handle || !/^[a-zA-Z0-9_]{1,50}$/.test(handle)) {
+        errorEl.textContent = 'Please enter a valid Twitter/X handle.';
+        errorEl.classList.add('visible');
+        return;
+      }
+
+      if (!GROQ_API_KEY || GROQ_API_KEY === 'YOUR_GROQ_API_KEY_HERE') {
+        errorEl.textContent = 'API key not configured. Add your Groq key to the file.';
+        errorEl.classList.add('visible');
+        return;
+      }
+
+      errorEl.classList.remove('visible');
+      currentHandle = handle;
+
+      document.getElementById('result-section').classList.remove('visible');
+      document.getElementById('loading-state').classList.add('visible');
+      document.getElementById('check-btn').disabled = true;
+
+      try {
+        const prompt = `You are analyzing a Twitter/X user's "Arbinaut score" — a fun metric of how much of an Arbitrum ecosystem degen they appear to be, based purely on their handle and typical CT persona.
+
+The user's handle is: @${handle}
+
+Return ONLY a valid JSON object with exactly these fields, no markdown, no preamble:
+{
+  "score": <integer between 0 and 1000>,
+  "rank": <one of exactly: "Normie", "Lurker", "Degen-in-training", "ETH Enjoyer", "L2 Curious", "Arbinaut Apprentice", "Arbinaut", "Arbinaut OG", "Full Degen", "Arbitrum Maxi">,
+  "analysis": <2-3 sentences, playful and CT-flavored. Be specific to the actual handle name. Sound like a crypto-twitter insider.>,
+  "tags": <array of exactly 5 short tags, 2-4 words each, describing their CT personality>
+}
+
+Scoring logic:
+- Handle contains "arb", "arbitrum", "nitro", "offchain", "stylus", "arbinaut" → 750–980
+- ETH, defi, gm, wagmi, web3, dao, l2, rollup, onchain → 400–720
+- Generic crypto (moon, whale, degen, alpha, ape, hodl, nft) → 220–480
+- Non-crypto handle → 30–200
+- Be creative and funny in the analysis. Reference the handle name directly.`;
+
+        const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + GROQ_API_KEY
+          },
+          body: JSON.stringify({
+            model: 'llama-3.3-70b-versatile',
+            max_tokens: 1000,
+            messages: [{ role: 'user', content: prompt }]
+          })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error?.message || 'API error');
+        }
+
+        const text = data.choices[0].message.content;
+        const clean = text.replace(/```json|```/g, '').trim();
+        const result = JSON.parse(clean);
+
+        displayResult(result);
+
+      } catch (err) {
+        document.getElementById('loading-state').classList.remove('visible');
+        document.getElementById('check-btn').disabled = false;
+        errorEl.textContent = 'Something went wrong. Check your API key or try again.';
+        errorEl.classList.add('visible');
+        console.error(err);
+      }
+    }
+
+    function displayResult(result) {
+      document.getElementById('loading-state').classList.remove('visible');
+      document.getElementById('check-btn').disabled = false;
+
+      const scoreEl = document.getElementById('score-display');
+      scoreEl.innerHTML = '0<span>/1000</span>';
+      animateScore(result.score);
+
+      setTimeout(() => {
+        document.getElementById('progress-fill').style.width = (result.score / 10) + '%';
+      }, 80);
+
+      const pill = document.getElementById('rank-pill');
+      pill.textContent = result.rank;
+      pill.className = 'rank-pill';
+      if (result.score >= 750) pill.classList.add('rank-elite');
+      else if (result.score >= 450) pill.classList.add('rank-high');
+      else if (result.score >= 200) pill.classList.add('rank-mid');
+      else pill.classList.add('rank-low');
+
+      document.getElementById('analysis-text').textContent = result.analysis;
+
+      const tagsRow = document.getElementById('tags-row');
+      tagsRow.innerHTML = '';
+      (result.tags || []).forEach((tag, i) => {
+        const el = document.createElement('span');
+        el.className = 'tag ' + (i < 3 ? 'tag-arb' : 'tag-neutral');
+        el.textContent = tag;
+        tagsRow.appendChild(el);
+      });
+
+      document.getElementById('result-section').classList.add('visible');
+
+      document.getElementById('share-btn').onclick = () => {
+        const text = `I just got my Arbinaut score!\n\n🔵 @${currentHandle}: ${result.score}/1000\n🚀 Rank: ${result.rank}\n\n"${result.analysis.split('.')[0]}."\n\nWhat's yours? 👇`;
+        window.open('https://twitter.com/intent/tweet?text=' + encodeURIComponent(text), '_blank');
+      };
+    }
+
+    function animateScore(target) {
+      const el = document.getElementById('score-display');
+      const start = performance.now();
+      const duration = 1400;
+      function step(now) {
+        const t = Math.min((now - start) / duration, 1);
+        const eased = 1 - Math.pow(1 - t, 4);
+        el.innerHTML = Math.round(eased * target) + '<span>/1000</span>';
+        if (t < 1) requestAnimationFrame(step);
+      }
+      requestAnimationFrame(step);
+    }
+
+    document.getElementById('handle-input').addEventListener('keydown', e => {
+      if (e.key === 'Enter') checkHandle();
+    });
+  </script>
+</body>
+</html>
