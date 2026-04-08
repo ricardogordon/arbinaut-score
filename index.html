@@ -13,7 +13,7 @@
        TwitterAPI.io key is stored safely in Vercel environment variables
   ============================================================ -->
   <script>
-    const GROQ_API_KEY = "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";
+    const GROQ_API_KEY = "YOUR_GROQ_API_KEY_HERE";
   </script>
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -606,7 +606,10 @@
           ? arbTweetTexts.map((t, i) => `${i + 1}. ${t.text}`).join('\n')
           : '(none)';
 
-        const prompt = `You are calculating the "Arbinaut Score" for @${handle} — a fun, accurate measure of how much of an Arbitrum ecosystem person they are.
+        // Pre-compute base score using exponential curve (stricter than linear)
+        const baseScore = Math.round(Math.pow(rawPct / 100, 1.5) * 1000);
+
+        const prompt = `You are calculating the "Arbinaut Score" for @${handle} — a strict, accurate measure of how much of a true Arbitrum ecosystem person they are. Most people should score LOW. Only genuine Arbitrum maxis should score above 700.
 
 Here is ALL the data you have:
 
@@ -614,10 +617,11 @@ TWEET DATA:
 - Total recent tweets analyzed: ${tweetCount}
 - Tweets mentioning Arbitrum: ${arbCount}
 - Raw Arbitrum tweet percentage: ${rawPct}%
-- Arbitrum tweets in the last 7 days: ${recentArbTweets} (recency signal — higher = more active recently)
+- Pre-computed base score (exponential curve): ${baseScore} pts
+- Arbitrum tweets in the last 7 days: ${recentArbTweets}
 
 BIO DATA:
-- Bio mentions Arbitrum-related keywords: ${bioMentionsArb ? 'YES — keywords found: ' + bioArbWords.join(', ') : 'NO'}
+- Bio mentions Arbitrum keywords: ${bioMentionsArb ? 'YES — ' + bioArbWords.join(', ') : 'NO'}
 - Full bio: "${bio || 'no bio found'}"
 
 RECENT TWEETS (all topics):
@@ -626,28 +630,56 @@ ${allBlock}
 ARBITRUM-SPECIFIC TWEETS:
 ${arbBlock}
 
-SCORING INSTRUCTIONS — use ALL parameters to create a unique score:
+STRICT SCORING FORMULA — follow this EXACTLY, step by step:
 
-1. BASE: Start from the raw Arbitrum % (${rawPct}%) mapped to 0-1000
-2. RECENCY BONUS: +50 to +150 points if they tweeted about Arbitrum in the last 7 days (${recentArbTweets} recent tweets)
-3. BIO BONUS: +50 to +100 points if their bio mentions Arbitrum keywords
-4. DEPTH BONUS/PENALTY: Adjust ±100 based on content quality:
-   - Governance, tech, ecosystem building, developer content = high depth (+50 to +100)
-   - Only price/moon talk = low depth (-50 to -100)
-   - Mix of both = neutral
-5. VARIETY BONUS: +25 to +75 if they cover multiple Arbitrum topics (price AND governance AND ecosystem AND tech)
-6. CAP at 1000, floor at 0
+STEP 1 — BASE (already computed): ${baseScore} pts
+  This uses an exponential curve: (arb% ^ 1.5) × 10
+  Examples: 5% → 11pts, 10% → 32pts, 20% → 89pts, 30% → 164pts, 50% → 354pts, 70% → 586pts, 90% → 854pts
 
-The score MUST feel unique — two people with the same raw % but different recency/bio/depth should get noticeably different scores.
+STEP 2 — PENALTIES (apply ALL that fit, they stack):
+  - Fewer than 3 Arbitrum tweets found: −200 pts
+  - 3 to 5 Arbitrum tweets found: −100 pts
+  - No Arbitrum tweets in the last 30 days: −150 pts
+  - Content is ONLY price/moon/pump talk: −200 pts
+  - Content is mostly price talk with occasional substance: −100 pts
+  - Bio has NO Arbitrum-related keywords: −50 pts
+
+STEP 3 — BONUSES (apply ALL that fit, they stack):
+  - Bio mentions Arbitrum keywords: +100 pts
+  - 1–2 Arbitrum tweets in last 7 days: +50 pts
+  - 3–5 Arbitrum tweets in last 7 days: +100 pts
+  - 6+ Arbitrum tweets in last 7 days: +150 pts
+  - Content shows depth (governance, tech, ecosystem building, dev content): +150 pts
+  - Content covers 3+ distinct Arbitrum topics (price + governance + tech + ecosystem): +75 pts
+
+STEP 4 — FINAL: Add base + all penalties + all bonuses. Cap at 1000, floor at 0.
+
+RANK THRESHOLDS (assign based on final score):
+  0–99: "Normie"
+  100–199: "Lurker"
+  200–299: "Degen-in-training"
+  300–399: "ETH Enjoyer"
+  400–499: "L2 Curious"
+  500–599: "Arbinaut Apprentice"
+  600–699: "Arbinaut"
+  700–799: "Arbinaut OG"
+  800–899: "Full Degen"
+  900–1000: "Arbitrum Maxi"
+
+IMPORTANT RULES:
+- Be STRICT. Most casual CT users who mention Arbitrum occasionally should land 100–350.
+- Only someone who lives and breathes Arbitrum daily deserves 700+.
+- The score must feel UNIQUE — show your work mentally and land on a precise number, not a round number like 400 or 500.
+- The analysis must be SPECIFIC to this person — reference their actual bio, actual topics, actual recent tweets. Never write generic text.
 
 Return ONLY a valid JSON object, no markdown, no preamble:
 
 {
   "arb_percentage": <integer 0-100, use raw % as base>,
-  "score": <integer 0-1000, calculated using ALL parameters above>,
-  "rank": <one of exactly: "Normie", "Lurker", "Degen-in-training", "ETH Enjoyer", "L2 Curious", "Arbinaut Apprentice", "Arbinaut", "Arbinaut OG", "Full Degen", "Arbitrum Maxi">,
-  "analysis": <2-3 sentences, playful CT-flavored. Be SPECIFIC — mention actual topics, recent tweets, or their bio. Make it feel personal, not generic.>,
-  "tags": <array of exactly 5 short tags (2-4 words each) that feel unique to THIS person based on what you actually saw>
+  "score": <integer 0-1000, calculated using the strict formula above — avoid round numbers>,
+  "rank": <assign using the rank thresholds above>,
+  "analysis": <2-3 sentences, playful CT-flavored, SPECIFIC to this person. Reference real things you saw in their tweets or bio. Roast normies gently.>,
+  "tags": <array of exactly 5 short tags (2-4 words each) unique to THIS person — never generic>
 }`;
 
         const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
