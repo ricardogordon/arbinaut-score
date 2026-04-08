@@ -524,15 +524,17 @@
       setStep('score', '');
 
       try {
-        // ── STEP 1: Scrape tweets via Apify (xtdata/twitter-x-user-tweets-scraper) ──
-        const apifyUrl = `https://api.apify.com/v2/acts/xtdata~twitter-x-user-tweets-scraper/run-sync-get-dataset-items?token=${APIFY_API_TOKEN}&timeout=120&memory=512`;
+        // ── STEP 1: Scrape tweets via Apify (apidojo/tweet-scraper) using from: search ──
+        // searchTerms with "from:handle" is the most reliable way to get a user's tweets
+        const apifyUrl = `https://api.apify.com/v2/acts/apidojo~tweet-scraper/run-sync-get-dataset-items?token=${APIFY_API_TOKEN}&timeout=120&memory=512`;
 
         const apifyRes = await fetch(apifyUrl, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            startUrls: [{ url: `https://twitter.com/${handle}` }],
-            maxItems: 100
+            searchTerms: [`from:${handle}`],
+            maxItems: 100,
+            sort: 'Latest'
           })
         });
 
