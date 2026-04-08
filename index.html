@@ -522,15 +522,28 @@
         // Search 1: all recent tweets from this user (up to 20)
         // Search 2: Arbitrum-specific tweets from this user (up to 20)
         // Cost: 2 API calls = ~$0.00015 each = $0.0003 per user check
-        // Calls our own Vercel serverless function (/api/search.js)
-        // which proxies to TwitterAPI.io — avoids CORS browser block
+        // Calls our Vercel serverless function which proxies to TwitterAPI.io
+        // fetchWithRetry retries once on failure to handle cold starts
+        async function fetchWithRetry(url, retries = 1) {
+          for (let i = 0; i <= retries; i++) {
+            try {
+              const r = await fetch(url);
+              if (r.ok) return r;
+              if (i === retries) return r;
+            } catch(e) {
+              if (i === retries) throw e;
+              await new Promise(r => setTimeout(r, 1500));
+            }
+          }
+        }
+
         const [allRes, arbRes] = await Promise.all([
-          fetch(`/api/search?query=from%3A${normalizedHandle}`),
-          fetch(`/api/search?query=arbitrum%20from%3A${normalizedHandle}`)
+          fetchWithRetry(`/api/search?query=from%3A${normalizedHandle}`),
+          fetchWithRetry(`/api/search?query=arbitrum%20from%3A${normalizedHandle}`)
         ]);
 
         if (!allRes.ok) {
-          throw new Error('Could not fetch tweets (' + allRes.status + '). Check your API setup.');
+          throw new Error('Could not fetch tweets (' + allRes.status + '). Try again in a moment.');
         }
 
         const allData = await allRes.json();
