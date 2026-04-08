@@ -524,16 +524,16 @@
       setStep('score', '');
 
       try {
-        // ── STEP 1: Scrape tweets via Apify (apidojo/tweet-scraper) ──────
-        const apifyUrl = `https://api.apify.com/v2/acts/apidojo~tweet-scraper/run-sync-get-dataset-items?token=${APIFY_API_TOKEN}&timeout=120&memory=512`;
+        // ── STEP 1: Scrape tweets via Apify (xtdata/twitter-x-user-tweets-scraper) ──
+        const apifyUrl = `https://api.apify.com/v2/acts/xtdata~twitter-x-user-tweets-scraper/run-sync-get-dataset-items?token=${APIFY_API_TOKEN}&timeout=120&memory=512`;
 
         const apifyRes = await fetch(apifyUrl, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
+            startUrls: [{ url: `https://twitter.com/${handle}` }],
             twitterHandles: [handle],
-            maxItems: 100,
-            addUserInfo: false
+            maxItems: 100
           })
         });
 
