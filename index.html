@@ -8,9 +8,13 @@
   <meta property="og:title" content="Arbinaut Score" />
   <meta property="og:description" content="How Arbitrum are you? Find out your score from 0 to 1000." />
 
-  <!-- IMPORTANT: Replace the value below with your free Groq API key (console.groq.com) -->
+  <!-- ============================================================
+       STEP 1: Paste your free Groq API key (console.groq.com)
+       STEP 2: Paste your free Apify API token (console.apify.com → Settings → Integrations)
+  ============================================================ -->
   <script>
-    const GROQ_API_KEY = "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";
+    const GROQ_API_KEY    = "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";
+    const APIFY_API_TOKEN = "apify_api_6XTUvPDaARPwtW1EmRVueXwcY2x9A30FEDIs";
   </script>
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -22,15 +26,10 @@
     :root {
       --arb-blue: #1B4DD4;
       --arb-blue-light: #4F78E0;
-      --arb-blue-pale: #EBF0FD;
       --arb-dark: #0A1628;
-      --arb-mid: #1A2E50;
       --white: #FFFFFF;
-      --gray-100: #F4F6FA;
-      --gray-200: #E8ECF5;
       --gray-400: #9BA8C0;
       --gray-600: #5A6A85;
-      --gray-800: #2C3A52;
       --font-display: 'Space Mono', monospace;
       --font-body: 'DM Sans', sans-serif;
     }
@@ -45,20 +44,18 @@
       overflow-x: hidden;
     }
 
-    /* Background grid */
     body::before {
       content: '';
       position: fixed;
       inset: 0;
       background-image:
-        linear-gradient(rgba(27, 77, 212, 0.07) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(27, 77, 212, 0.07) 1px, transparent 1px);
+        linear-gradient(rgba(27,77,212,0.07) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(27,77,212,0.07) 1px, transparent 1px);
       background-size: 40px 40px;
       pointer-events: none;
       z-index: 0;
     }
 
-    /* Glow blobs */
     body::after {
       content: '';
       position: fixed;
@@ -67,7 +64,7 @@
       transform: translateX(-50%);
       width: 700px;
       height: 500px;
-      background: radial-gradient(ellipse, rgba(27, 77, 212, 0.25) 0%, transparent 70%);
+      background: radial-gradient(ellipse, rgba(27,77,212,0.25) 0%, transparent 70%);
       pointer-events: none;
       z-index: 0;
     }
@@ -79,11 +76,9 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      justify-content: flex-start;
       padding: 3rem 1rem 4rem;
     }
 
-    /* Header */
     .header {
       text-align: center;
       margin-bottom: 2.5rem;
@@ -98,10 +93,7 @@
       margin-bottom: 1.5rem;
     }
 
-    .arb-logo {
-      width: 32px;
-      height: 32px;
-    }
+    .arb-logo { width: 32px; height: 32px; }
 
     .logo-text {
       font-family: var(--font-display);
@@ -113,16 +105,13 @@
 
     .hero-title {
       font-family: var(--font-display);
-      font-size: clamp(32px, 6vw, 54px);
+      font-size: clamp(30px, 6vw, 52px);
       font-weight: 700;
       line-height: 1.1;
       margin-bottom: 1rem;
-      letter-spacing: -0.02em;
     }
 
-    .hero-title .accent {
-      color: var(--arb-blue-light);
-    }
+    .hero-title .accent { color: var(--arb-blue-light); }
 
     .hero-sub {
       font-size: 16px;
@@ -132,19 +121,17 @@
       margin: 0 auto;
     }
 
-    /* Card */
     .card {
       background: rgba(255,255,255,0.04);
       border: 1px solid rgba(255,255,255,0.08);
       border-radius: 20px;
       padding: 2rem;
       width: 100%;
-      max-width: 520px;
+      max-width: 540px;
       backdrop-filter: blur(12px);
       animation: fadeUp 0.6s 0.1s ease both;
     }
 
-    /* Input row */
     .input-group {
       display: flex;
       gap: 10px;
@@ -216,35 +203,44 @@
     }
     .error-msg.visible { display: block; }
 
-    /* Loading */
-    .loading-state {
-      display: none;
-      text-align: center;
-      padding: 2.5rem 0 1rem;
-    }
-    .loading-state.visible { display: block; }
+    .steps-wrap { display: none; margin-top: 1.5rem; }
+    .steps-wrap.visible { display: block; }
 
-    .spinner {
-      width: 36px;
-      height: 36px;
-      border: 2px solid rgba(255,255,255,0.1);
+    .step-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+      font-size: 14px;
+      color: var(--gray-400);
+      transition: color 0.3s;
+    }
+    .step-row:last-child { border-bottom: none; }
+    .step-row.active { color: var(--white); }
+    .step-row.done { color: #4ade80; }
+    .step-row.error-step { color: #F87171; }
+
+    .step-icon {
+      width: 22px;
+      height: 22px;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+    }
+
+    .spinner-sm {
+      width: 16px;
+      height: 16px;
+      border: 2px solid rgba(255,255,255,0.15);
       border-top-color: var(--arb-blue-light);
       border-radius: 50%;
       animation: spin 0.75s linear infinite;
-      margin: 0 auto 1rem;
     }
 
-    .loading-state p {
-      font-size: 14px;
-      color: var(--gray-400);
-      font-family: var(--font-display);
-    }
-
-    /* Result */
-    .result-section {
-      display: none;
-      margin-top: 1.5rem;
-    }
+    .result-section { display: none; margin-top: 1.5rem; }
     .result-section.visible { display: block; }
 
     .divider {
@@ -253,10 +249,7 @@
       margin: 1.5rem 0;
     }
 
-    .score-block {
-      text-align: center;
-      padding: 1rem 0;
-    }
+    .score-block { text-align: center; padding: 1rem 0; }
 
     .score-label {
       font-family: var(--font-display);
@@ -269,23 +262,23 @@
 
     .score-number {
       font-family: var(--font-display);
-      font-size: 86px;
+      font-size: 80px;
       font-weight: 700;
       line-height: 1;
       color: var(--white);
       margin-bottom: 4px;
     }
 
-    .score-number span {
-      color: var(--arb-blue-light);
+    .score-number span { color: var(--arb-blue-light); }
+
+    .arb-pct {
+      font-family: var(--font-display);
+      font-size: 14px;
+      color: var(--gray-400);
+      margin-bottom: 1rem;
     }
 
-    .score-outof {
-      font-size: 13px;
-      color: var(--gray-600);
-      margin-bottom: 1.25rem;
-      font-family: var(--font-display);
-    }
+    .arb-pct strong { color: var(--arb-blue-light); }
 
     .progress-track {
       background: rgba(255,255,255,0.07);
@@ -301,7 +294,7 @@
       border-radius: 999px;
       background: linear-gradient(90deg, var(--arb-blue), var(--arb-blue-light));
       width: 0%;
-      transition: width 1.4s cubic-bezier(0.22, 1, 0.36, 1);
+      transition: width 1.4s cubic-bezier(0.22,1,0.36,1);
     }
 
     .rank-pill {
@@ -313,12 +306,19 @@
       font-weight: 700;
       letter-spacing: 0.06em;
       text-transform: uppercase;
+      margin-bottom: 0.5rem;
     }
 
-    .rank-low    { background: rgba(255,255,255,0.07); color: var(--gray-400); }
-    .rank-mid    { background: rgba(27,77,212,0.2); color: var(--arb-blue-light); border: 1px solid rgba(27,77,212,0.4); }
-    .rank-high   { background: rgba(27,77,212,0.35); color: #7AA6F0; border: 1px solid rgba(27,77,212,0.6); }
-    .rank-elite  { background: var(--arb-blue); color: #fff; }
+    .rank-low   { background: rgba(255,255,255,0.07); color: var(--gray-400); }
+    .rank-mid   { background: rgba(27,77,212,0.2); color: var(--arb-blue-light); border: 1px solid rgba(27,77,212,0.4); }
+    .rank-high  { background: rgba(27,77,212,0.35); color: #7AA6F0; border: 1px solid rgba(27,77,212,0.6); }
+    .rank-elite { background: var(--arb-blue); color: #fff; }
+
+    .tweet-count-note {
+      font-size: 12px;
+      color: var(--gray-600);
+      font-family: var(--font-display);
+    }
 
     .analysis-text {
       font-size: 15px;
@@ -384,7 +384,6 @@
       font-size: 12px;
       color: var(--gray-600);
       font-family: var(--font-display);
-      animation: fadeUp 0.6s 0.2s ease both;
     }
 
     @keyframes fadeUp {
@@ -397,7 +396,7 @@
     @media (max-width: 480px) {
       .page-wrap { padding: 2rem 1rem 3rem; }
       .card { padding: 1.5rem; }
-      .score-number { font-size: 64px; }
+      .score-number { font-size: 60px; }
       #check-btn { padding: 0 16px; font-size: 13px; }
     }
   </style>
@@ -414,7 +413,7 @@
         <span class="logo-text">Arbitrum</span>
       </div>
       <h1 class="hero-title">What's your<br><span class="accent">Arbinaut</span> score?</h1>
-      <p class="hero-sub">Enter your Twitter/X handle and find out how much of an Arbitrum degen you really are. Scores from 0 to 1000.</p>
+      <p class="hero-sub">Enter your Twitter/X handle. We'll read your last 100 tweets and score how much of an Arbitrum degen you really are.</p>
     </header>
 
     <div class="card">
@@ -423,32 +422,40 @@
           <span class="at-sign">@</span>
           <input id="handle-input" type="text" placeholder="yourhandle" autocomplete="off" spellcheck="false" maxlength="50" />
         </div>
-        <button id="check-btn" onclick="checkHandle()">Check</button>
+        <button id="check-btn" onclick="runCheck()">Check</button>
       </div>
-      <div class="error-msg" id="error-msg">Please enter a valid Twitter/X handle.</div>
+      <div class="error-msg" id="error-msg"></div>
 
-      <div class="loading-state" id="loading-state">
-        <div class="spinner"></div>
-        <p>Scanning your CT presence...</p>
+      <div class="steps-wrap" id="steps-wrap">
+        <div class="step-row" id="step-scrape">
+          <div class="step-icon" id="icon-scrape">○</div>
+          <span>Fetching your last 100 tweets from X...</span>
+        </div>
+        <div class="step-row" id="step-analyze">
+          <div class="step-icon" id="icon-analyze">○</div>
+          <span>Analyzing Arbitrum content with AI...</span>
+        </div>
+        <div class="step-row" id="step-score">
+          <div class="step-icon" id="icon-score">○</div>
+          <span>Calculating your Arbinaut score...</span>
+        </div>
       </div>
 
       <div class="result-section" id="result-section">
         <hr class="divider" />
-
         <div class="score-block">
           <div class="score-label">Arbinaut score</div>
           <div class="score-number" id="score-display">0<span>/1000</span></div>
+          <div class="arb-pct" id="arb-pct"></div>
           <div class="progress-track">
             <div class="progress-fill" id="progress-fill"></div>
           </div>
-          <div class="rank-pill" id="rank-pill"></div>
+          <div class="rank-pill" id="rank-pill"></div><br>
+          <div class="tweet-count-note" id="tweet-count-note"></div>
         </div>
-
         <hr class="divider" />
-
         <p class="analysis-text" id="analysis-text"></p>
         <div class="tags-row" id="tags-row"></div>
-
         <button class="share-btn" id="share-btn">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
             <path d="M22 4s-.7 2.1-2 3.4c1.6 10-9.4 17.3-18 11.6 2.2.1 4.4-.6 6-2C3 15.5.5 9.6 3 5c2.2 2.6 5.6 4.1 9 4-.9-4.2 4-6.6 7-3.8 1.1 0 3-1.2 3-1.2z"/>
@@ -467,7 +474,22 @@
   <script>
     let currentHandle = '';
 
-    async function checkHandle() {
+    function setStep(stepId, state) {
+      const row = document.getElementById('step-' + stepId);
+      const icon = document.getElementById('icon-' + stepId);
+      row.className = 'step-row ' + state;
+      if (state === 'active') {
+        icon.innerHTML = '<div class="spinner-sm"></div>';
+      } else if (state === 'done') {
+        icon.textContent = '✓';
+      } else if (state === 'error-step') {
+        icon.textContent = '✗';
+      } else {
+        icon.textContent = '○';
+      }
+    }
+
+    async function runCheck() {
       const input = document.getElementById('handle-input');
       const handle = input.value.replace('@', '').trim();
       const errorEl = document.getElementById('error-msg');
@@ -479,7 +501,13 @@
       }
 
       if (!GROQ_API_KEY || GROQ_API_KEY === 'YOUR_GROQ_API_KEY_HERE') {
-        errorEl.textContent = 'API key not configured. Add your Groq key to the file.';
+        errorEl.textContent = 'Groq API key not set. Open index.html and add your key.';
+        errorEl.classList.add('visible');
+        return;
+      }
+
+      if (!APIFY_API_TOKEN || APIFY_API_TOKEN === 'YOUR_APIFY_TOKEN_HERE') {
+        errorEl.textContent = 'Apify token not set. Open index.html and add your token.';
         errorEl.classList.add('visible');
         return;
       }
@@ -488,30 +516,69 @@
       currentHandle = handle;
 
       document.getElementById('result-section').classList.remove('visible');
-      document.getElementById('loading-state').classList.add('visible');
+      document.getElementById('steps-wrap').classList.add('visible');
       document.getElementById('check-btn').disabled = true;
 
+      setStep('scrape', 'active');
+      setStep('analyze', '');
+      setStep('score', '');
+
       try {
-        const prompt = `You are analyzing a Twitter/X user's "Arbinaut score" — a fun metric of how much of an Arbitrum ecosystem degen they appear to be, based purely on their handle and typical CT persona.
+        // ── STEP 1: Scrape tweets via Apify ──────────────────────────────
+        const apifyUrl = `https://api.apify.com/v2/acts/apidojo~twitter-profile-scraper/run-sync-get-dataset-items?token=${APIFY_API_TOKEN}&timeout=60&memory=256`;
 
-The user's handle is: @${handle}
+        const apifyRes = await fetch(apifyUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            twitterHandles: [handle],
+            maxTweets: 100,
+            includeReplies: false
+          })
+        });
 
-Return ONLY a valid JSON object with exactly these fields, no markdown, no preamble:
+        if (!apifyRes.ok) {
+          const errText = await apifyRes.text();
+          throw new Error('Could not fetch tweets (Apify ' + apifyRes.status + '). Check your Apify token.');
+        }
+
+        const tweets = await apifyRes.json();
+
+        if (!tweets || tweets.length === 0) {
+          throw new Error('No tweets found for @' + handle + '. The account may be private or does not exist.');
+        }
+
+        const tweetTexts = tweets
+          .filter(t => t.full_text || t.text)
+          .map(t => (t.full_text || t.text || '').replace(/\s+/g, ' ').trim())
+          .filter(t => t.length > 5)
+          .slice(0, 100);
+
+        const tweetCount = tweetTexts.length;
+        setStep('scrape', 'done');
+
+        // ── STEP 2: Analyze with Groq ─────────────────────────────────────
+        setStep('analyze', 'active');
+
+        const tweetBlock = tweetTexts.map((t, i) => `${i + 1}. ${t}`).join('\n');
+
+        const prompt = `You are analyzing the Twitter activity of @${handle} to calculate their "Arbinaut Score" — a fun measure of how much they talk about the Arbitrum ecosystem.
+
+Here are their last ${tweetCount} tweets:
+
+${tweetBlock}
+
+Analyze these tweets and return ONLY a valid JSON object, no markdown, no preamble:
+
 {
-  "score": <integer between 0 and 1000>,
+  "arb_percentage": <integer 0-100, what % of these tweets are about Arbitrum or its ecosystem (ARB token, Arbitrum One, Nova, Stylus, Orbit, Nitro, DAO, or projects built on Arbitrum)>,
+  "score": <integer 0-1000, based on arb_percentage but also depth: mentioning ARB price = low depth, discussing governance/tech/ecosystem projects = high depth>,
   "rank": <one of exactly: "Normie", "Lurker", "Degen-in-training", "ETH Enjoyer", "L2 Curious", "Arbinaut Apprentice", "Arbinaut", "Arbinaut OG", "Full Degen", "Arbitrum Maxi">,
-  "analysis": <2-3 sentences, playful and CT-flavored. Be specific to the actual handle name. Sound like a crypto-twitter insider.>,
-  "tags": <array of exactly 5 short tags, 2-4 words each, describing their CT personality>
-}
+  "analysis": <2-3 sentences, playful CT-flavored, referencing specific topics you actually saw in their tweets. Sound like a crypto-twitter insider.>,
+  "tags": <array of exactly 5 short tags (2-4 words each) describing what this person actually tweets about>
+}`;
 
-Scoring logic:
-- Handle contains "arb", "arbitrum", "nitro", "offchain", "stylus", "arbinaut" → 750–980
-- ETH, defi, gm, wagmi, web3, dao, l2, rollup, onchain → 400–720
-- Generic crypto (moon, whale, degen, alpha, ape, hodl, nft) → 220–480
-- Non-crypto handle → 30–200
-- Be creative and funny in the analysis. Reference the handle name directly.`;
-
-        const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -520,42 +587,48 @@ Scoring logic:
           body: JSON.stringify({
             model: 'llama-3.3-70b-versatile',
             max_tokens: 1000,
+            temperature: 0.7,
             messages: [{ role: 'user', content: prompt }]
           })
         });
 
-        const data = await response.json();
+        if (!groqRes.ok) throw new Error('Groq error: ' + groqRes.status);
 
-        if (!response.ok) {
-          throw new Error(data.error?.message || 'API error');
-        }
-
-        const text = data.choices[0].message.content;
-        const clean = text.replace(/```json|```/g, '').trim();
+        const groqData = await groqRes.json();
+        const rawText = groqData.choices[0].message.content;
+        const clean = rawText.replace(/```json|```/g, '').trim();
         const result = JSON.parse(clean);
 
-        displayResult(result);
+        setStep('analyze', 'done');
+        setStep('score', 'active');
+        await new Promise(r => setTimeout(r, 600));
+        setStep('score', 'done');
+
+        displayResult(result, tweetCount);
 
       } catch (err) {
-        document.getElementById('loading-state').classList.remove('visible');
-        document.getElementById('check-btn').disabled = false;
-        errorEl.textContent = 'Something went wrong. Check your API key or try again.';
+        const activeRow = document.querySelector('.step-row.active');
+        if (activeRow) {
+          activeRow.className = 'step-row error-step';
+          activeRow.querySelector('.step-icon').textContent = '✗';
+        }
+        errorEl.textContent = err.message || 'Something went wrong. Try again.';
         errorEl.classList.add('visible');
+        document.getElementById('check-btn').disabled = false;
         console.error(err);
       }
     }
 
-    function displayResult(result) {
-      document.getElementById('loading-state').classList.remove('visible');
+    function displayResult(result, tweetCount) {
       document.getElementById('check-btn').disabled = false;
-
-      const scoreEl = document.getElementById('score-display');
-      scoreEl.innerHTML = '0<span>/1000</span>';
       animateScore(result.score);
 
       setTimeout(() => {
         document.getElementById('progress-fill').style.width = (result.score / 10) + '%';
       }, 80);
+
+      document.getElementById('arb-pct').innerHTML =
+        `<strong>${result.arb_percentage}%</strong> of your last ${tweetCount} tweets mention Arbitrum`;
 
       const pill = document.getElementById('rank-pill');
       pill.textContent = result.rank;
@@ -565,6 +638,7 @@ Scoring logic:
       else if (result.score >= 200) pill.classList.add('rank-mid');
       else pill.classList.add('rank-low');
 
+      document.getElementById('tweet-count-note').textContent = `Based on ${tweetCount} tweets analyzed`;
       document.getElementById('analysis-text').textContent = result.analysis;
 
       const tagsRow = document.getElementById('tags-row');
@@ -579,7 +653,7 @@ Scoring logic:
       document.getElementById('result-section').classList.add('visible');
 
       document.getElementById('share-btn').onclick = () => {
-        const text = `I just got my Arbinaut score!\n\n🔵 @${currentHandle}: ${result.score}/1000\n🚀 Rank: ${result.rank}\n\n"${result.analysis.split('.')[0]}."\n\nWhat's yours? 👇`;
+        const text = `Just checked my Arbinaut score!\n\n🔵 @${currentHandle}: ${result.score}/1000\n🚀 Rank: ${result.rank}\n📊 ${result.arb_percentage}% of my tweets are about Arbitrum\n\nWhat's yours? 👇`;
         window.open('https://twitter.com/intent/tweet?text=' + encodeURIComponent(text), '_blank');
       };
     }
@@ -587,9 +661,8 @@ Scoring logic:
     function animateScore(target) {
       const el = document.getElementById('score-display');
       const start = performance.now();
-      const duration = 1400;
       function step(now) {
-        const t = Math.min((now - start) / duration, 1);
+        const t = Math.min((now - start) / 1400, 1);
         const eased = 1 - Math.pow(1 - t, 4);
         el.innerHTML = Math.round(eased * target) + '<span>/1000</span>';
         if (t < 1) requestAnimationFrame(step);
@@ -598,7 +671,7 @@ Scoring logic:
     }
 
     document.getElementById('handle-input').addEventListener('keydown', e => {
-      if (e.key === 'Enter') checkHandle();
+      if (e.key === 'Enter') runCheck();
     });
   </script>
 </body>
