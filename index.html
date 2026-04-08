@@ -507,6 +507,7 @@
 
       errorEl.classList.remove('visible');
       currentHandle = handle;
+      const normalizedHandle = handle.toLowerCase();
 
       document.getElementById('result-section').classList.remove('visible');
       document.getElementById('steps-wrap').classList.add('visible');
@@ -524,8 +525,8 @@
         // Calls our own Vercel serverless function (/api/search.js)
         // which proxies to TwitterAPI.io — avoids CORS browser block
         const [allRes, arbRes] = await Promise.all([
-          fetch(`/api/search?query=from%3A${handle}`),
-          fetch(`/api/search?query=arbitrum%20from%3A${handle}`)
+          fetch(`/api/search?query=from%3A${normalizedHandle}`),
+          fetch(`/api/search?query=arbitrum%20from%3A${normalizedHandle}`)
         ]);
 
         if (!allRes.ok) {
