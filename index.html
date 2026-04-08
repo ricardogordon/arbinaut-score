@@ -524,17 +524,16 @@
       setStep('score', '');
 
       try {
-        // ── STEP 1: Scrape tweets via Apify ──────────────────────────────
-        const apifyUrl = `https://api.apify.com/v2/acts/apidojo~twitter-profile-scraper/run-sync-get-dataset-items?token=${APIFY_API_TOKEN}&timeout=60&memory=256`;
+        // ── STEP 1: Scrape tweets via Apify (apidojo/tweet-scraper) ──────
+        const apifyUrl = `https://api.apify.com/v2/acts/apidojo~tweet-scraper/run-sync-get-dataset-items?token=${APIFY_API_TOKEN}&timeout=120&memory=512`;
 
         const apifyRes = await fetch(apifyUrl, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            startUrls: [{ url: `https://x.com/${handle}` }],
             twitterHandles: [handle],
-            maxTweets: 100,
-            includeReplies: false
+            maxItems: 100,
+            addUserInfo: false
           })
         });
 
@@ -549,9 +548,10 @@
           throw new Error('No tweets found for @' + handle + '. The account may be private or does not exist.');
         }
 
+        // apidojo/tweet-scraper returns objects with a 'text' field
         const tweetTexts = tweets
-          .filter(t => t.full_text || t.text)
-          .map(t => (t.full_text || t.text || '').replace(/\s+/g, ' ').trim())
+          .filter(t => t.text || t.full_text || t.content)
+          .map(t => (t.text || t.full_text || t.content || '').replace(/\s+/g, ' ').trim())
           .filter(t => t.length > 5)
           .slice(0, 100);
 
