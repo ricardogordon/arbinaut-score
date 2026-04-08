@@ -17,12 +17,9 @@
   <meta name="twitter:description" content="Enter your Twitter/X handle and find out how much of an Arbitrum degen you really are." />
   <meta name="twitter:image" content="https://arbinaut-score.vercel.app/og-image.jpg" />
 
-  <!-- ============================================================
-       Paste your OpenAI API key below (platform.openai.com/api-keys)
-       TwitterAPI.io key is stored safely in Vercel environment variables
-  ============================================================ -->
+  <!-- TwitterAPI.io and OpenAI keys are stored in Vercel environment variables -->
   <script>
-    const OPENAI_API_KEY = "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";
+    const OPENAI_API_KEY = "via-vercel";
   </script>
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -585,12 +582,6 @@
         return;
       }
 
-      if (!OPENAI_API_KEY || OPENAI_API_KEY === 'YOUR_OPENAI_API_KEY_HERE') {
-        errorEl.textContent = 'OpenAI API key not set. Open index.html and add your key.';
-        errorEl.classList.add('visible');
-        return;
-      }
-
       errorEl.classList.remove('visible');
       currentHandle = handle;
       const normalizedHandle = handle.toLowerCase();
@@ -724,12 +715,9 @@ Return ONLY JSON:
 
         async function callGroq(prompt, retries = 2) {
           for (let i = 0; i <= retries; i++) {
-            const r = await fetch('https://api.openai.com/v1/chat/completions', {
+            const r = await fetch('/api/search?type=ai', {
               method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': 'Bearer ' + OPENAI_API_KEY
-              },
+              headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
                 model: 'gpt-4o-mini',
                 max_tokens: 1000,
