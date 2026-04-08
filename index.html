@@ -686,32 +686,30 @@
         // Pre-compute base score using exponential curve (stricter than linear)
         const baseScore = Math.round(Math.pow(rawPct / 100, 1.5) * 1000);
 
-        const prompt = `Score @${handle} as an Arbitrum ecosystem person (0-1000).
+        const prompt = `You are scoring @${handle} as an Arbitrum ecosystem degen (0-1000).
 
 DATA:
-- Total tweets: ${tweetCount}, Arbitrum tweets: ${arbCount} (${rawPct}%)
-- Base score (exponential): ${baseScore}
-- Arbitrum tweets last 7 days: ${recentArbTweets}
-- Bio has Arbitrum keywords: ${bioMentionsArb ? 'YES: ' + bioArbWords.join(', ') : 'NO'}
+- Total tweets: ${tweetCount} | Arbitrum tweets: ${arbCount} (${rawPct}%)
+- Base score: ${baseScore} | Arb tweets last 7 days: ${recentArbTweets}
+- Bio Arbitrum keywords: ${bioMentionsArb ? 'YES: ' + bioArbWords.join(', ') : 'NO'}
 - Bio: "${bio || 'none'}"
+- Recent tweets: ${allBlock}
+- Arbitrum tweets: ${arbBlock}
 
-RECENT TWEETS: ${allBlock}
-ARBITRUM TWEETS: ${arbBlock}
+SCORING:
+1. Start: ${baseScore}
+2. Penalties: <3 arb tweets:-200 | 3-5:-100 | arb tweet >30d old:-300 | >90d:-500 extra | >180d:-200 extra | price/moon only:-200 | mostly price:-100 | no arb bio:-50
+   CRITICAL: Old tweets = big penalty. Last arb tweet 7mo ago = near zero score.
+3. Bonuses: arb bio:+100 | 1-2 arb/7d:+50 | 3-5:+100 | 6+:+150 | deep content:+150 | varied topics:+75
+4. Cap 0-1000. No round numbers.
 
-SCORING (step by step):
-1. Start with base: ${baseScore}
-2. PENALTIES (stack all that apply):
-   <3 arb tweets: -200 | 3-5: -100
-   Arb tweet >30d old: -300 | >90d: -500 more | >180d: -200 more
-   CRITICAL: Check tweet dates. Old tweets = heavy penalty. 7mo old = near zero.
-   Price/moon only: -200 | Mostly price: -100 | No arb bio: -50
-3. BONUSES: Arb bio: +100 | 1-2 arb/week: +50 | 3-5: +100 | 6+: +150 | Deep content: +150 | Varied topics: +75
-4. Cap 0-1000
+RANK (pick EXACTLY one based on final score):
+0-99:"Normie" | 100-199:"Lurker" | 200-299:"Degen-in-training" | 300-399:"ETH Enjoyer" | 400-499:"L2 Curious" | 500-599:"Arbinaut Apprentice" | 600-699:"Arbinaut" | 700-799:"Arbinaut OG" | 800-899:"Full Degen" | 900-1000:"Arbitrum Maxi"
 
-RANKS: 0-99 Normie | 100-199 Lurker | 200-299 Degen-in-training | 300-399 ETH Enjoyer | 400-499 L2 Curious | 500-599 Arbinaut Apprentice | 600-699 Arbinaut | 700-799 Arbinaut OG | 800-899 Full Degen | 900-1000 Arbitrum Maxi
+ANALYSIS STYLE: Write like a CT degen — playful, punchy, a little savage. Reference their actual tweets and bio. Roast normies. Hype up maxis. No corporate language, no "it's worth noting". Sound like someone who lives on CT.
 
-Return ONLY JSON:
-{"arb_percentage":<0-100>,"score":<0-1000, no round numbers>,"rank":<rank>,"analysis":<2-3 sentences, CT-flavored, specific to this person>,"tags":<5 short tags>}`
+Return ONLY valid JSON, no markdown:
+{"arb_percentage":<0-100>,"score":<integer, no round numbers>,"rank":<EXACT rank string from list above, not a number>,"analysis":<2-3 sentences, CT degen tone, specific to this person>,"tags":<array of 5 short tags>}`
 
         async function callGroq(prompt, retries = 2) {
           for (let i = 0; i <= retries; i++) {
