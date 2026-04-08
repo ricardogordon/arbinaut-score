@@ -10,11 +10,11 @@
 
   <!-- ============================================================
        STEP 1: Paste your free Groq API key (console.groq.com)
-       STEP 2: Paste your free Apify API token (console.apify.com → Settings → Integrations)
+       STEP 2: Paste your TwitterAPI.io key (twitterapi.io → dashboard)
   ============================================================ -->
   <script>
-    const GROQ_API_KEY    = "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";
-    const APIFY_API_TOKEN = "apify_api_GbRUz1U24khYCHGi4BxnYcnF6VGIbJ2kW0L9";
+    const GROQ_API_KEY       = "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";
+    const TWITTER_API_KEY    = "new1_12ae469703b04d23aaa7112c3b3991cd";
   </script>
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -466,7 +466,7 @@
     </div>
 
     <footer class="footer">
-      built for the Arbitrum community &nbsp;·&nbsp; powered by Groq AI
+      built for the Arbitrum community &nbsp;·&nbsp; powered by TwitterAPI.io + Groq
     </footer>
 
   </div>
@@ -506,8 +506,8 @@
         return;
       }
 
-      if (!APIFY_API_TOKEN || APIFY_API_TOKEN === 'YOUR_APIFY_TOKEN_HERE') {
-        errorEl.textContent = 'Apify token not set. Open index.html and add your token.';
+      if (!TWITTER_API_KEY || TWITTER_API_KEY === 'YOUR_TWITTERAPIIO_KEY_HERE') {
+        errorEl.textContent = 'TwitterAPI.io key not set. Open index.html and add your key.';
         errorEl.classList.add('visible');
         return;
       }
@@ -524,68 +524,77 @@
       setStep('score', '');
 
       try {
-        // ── STEP 1: Scrape tweets via Apify (apidojo/tweet-scraper) using from: search ──
-        // searchTerms with "from:handle" is the most reliable way to get a user's tweets
-        const apifyUrl = `https://api.apify.com/v2/acts/apidojo~tweet-scraper/run-sync-get-dataset-items?token=${APIFY_API_TOKEN}&timeout=120&memory=512`;
+        // ── STEP 1: Two searches via TwitterAPI.io ───────────────────────
+        // Search 1: all recent tweets from this user (up to 20)
+        // Search 2: Arbitrum-specific tweets from this user (up to 20)
+        // Cost: 2 API calls = ~$0.00015 each = $0.0003 per user check
+        const headers = { 'X-API-Key': TWITTER_API_KEY };
 
-        const apifyRes = await fetch(apifyUrl, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            searchTerms: [`from:${handle}`],
-            maxItems: 100,
-            sort: 'Latest'
-          })
-        });
+        const [allRes, arbRes] = await Promise.all([
+          fetch(`https://api.twitterapi.io/twitter/tweet/advanced_search?query=from%3A${handle}&queryType=Latest`, { headers }),
+          fetch(`https://api.twitterapi.io/twitter/tweet/advanced_search?query=arbitrum%20from%3A${handle}&queryType=Latest`, { headers })
+        ]);
 
-        if (!apifyRes.ok) {
-          const errText = await apifyRes.text();
-          throw new Error('Could not fetch tweets (Apify ' + apifyRes.status + '). Check your Apify token.');
+        if (!allRes.ok) {
+          throw new Error('Could not fetch tweets (' + allRes.status + '). Check your TwitterAPI.io key.');
         }
 
-        const tweets = await apifyRes.json();
+        const allData = await allRes.json();
+        const arbData = arbRes.ok ? await arbRes.json() : { tweets: [] };
 
-        // DEBUG: log first item so we can see the field names
-        if (tweets && tweets.length > 0) {
-          console.log('Apify first item keys:', Object.keys(tweets[0]));
-          console.log('Apify first item:', JSON.stringify(tweets[0]).slice(0, 500));
-        } else {
-          console.log('Apify returned empty array');
-        }
+        const allTweets = allData.tweets || [];
+        const arbTweets = arbData.tweets || [];
 
-        if (!tweets || tweets.length === 0) {
+        if (allTweets.length === 0) {
           throw new Error('No tweets found for @' + handle + '. The account may be private or does not exist.');
         }
 
-        // Try every possible field name Twitter scrapers use
-        const tweetTexts = tweets
-          .map(t => t.text || t.full_text || t.content || t.body || t.tweet || t.tweetText || t.tweet_text || '')
-          .map(t => t.replace(/\s+/g, ' ').trim())
-          .filter(t => t.length > 5)
-          .slice(0, 100);
+        // Build text arrays for Groq analysis
+        const allTweetTexts = allTweets
+          .map(t => (t.text || t.full_text || '').replace(/\s+/g, ' ').trim())
+          .filter(t => t.length > 5);
 
-        const tweetCount = tweetTexts.length;
+        const arbTweetTexts = arbTweets
+          .map(t => (t.text || t.full_text || '').replace(/\s+/g, ' ').trim())
+          .filter(t => t.length > 5);
+
+        const tweetCount = allTweetTexts.length;
+        const arbCount = arbTweetTexts.length;
+
         setStep('scrape', 'done');
 
         // ── STEP 2: Analyze with Groq ─────────────────────────────────────
         setStep('analyze', 'active');
 
-        const tweetBlock = tweetTexts.map((t, i) => `${i + 1}. ${t}`).join('\n');
+        const allBlock = allTweetTexts.length > 0
+          ? allTweetTexts.map((t, i) => `${i + 1}. ${t}`).join('\n')
+          : '(no recent tweets found)';
 
-        const prompt = `You are analyzing the Twitter activity of @${handle} to calculate their "Arbinaut Score" — a fun measure of how much they talk about the Arbitrum ecosystem.
+        const arbBlock = arbTweetTexts.length > 0
+          ? arbTweetTexts.map((t, i) => `${i + 1}. ${t}`).join('\n')
+          : '(none)';
 
-Here are their last ${tweetCount} tweets:
+        const prompt = `You are calculating the "Arbinaut Score" for @${handle} — a fun measure of how much they talk about the Arbitrum ecosystem on Twitter.
 
-${tweetBlock}
+Here is the data:
+- Total recent tweets found: ${tweetCount}
+- Tweets that mention Arbitrum: ${arbCount}
+- Raw Arbitrum tweet percentage: ${tweetCount > 0 ? Math.round((arbCount / tweetCount) * 100) : 0}%
 
-Analyze these tweets and return ONLY a valid JSON object, no markdown, no preamble:
+Sample of their recent tweets:
+${allBlock}
+
+Their Arbitrum-specific tweets:
+${arbBlock}
+
+Based on this data, return ONLY a valid JSON object, no markdown, no preamble:
 
 {
-  "arb_percentage": <integer 0-100, what % of these tweets are about Arbitrum or its ecosystem (ARB token, Arbitrum One, Nova, Stylus, Orbit, Nitro, DAO, or projects built on Arbitrum)>,
-  "score": <integer 0-1000, based on arb_percentage but also depth: mentioning ARB price = low depth, discussing governance/tech/ecosystem projects = high depth>,
+  "arb_percentage": <integer 0-100, the % of tweets about Arbitrum — use the raw percentage above as your base, adjust slightly based on content depth>,
+  "score": <integer 0-1000, based on arb_percentage but reward depth: price talk = low, governance/tech/ecosystem = high>,
   "rank": <one of exactly: "Normie", "Lurker", "Degen-in-training", "ETH Enjoyer", "L2 Curious", "Arbinaut Apprentice", "Arbinaut", "Arbinaut OG", "Full Degen", "Arbitrum Maxi">,
-  "analysis": <2-3 sentences, playful CT-flavored, referencing specific topics you actually saw in their tweets. Sound like a crypto-twitter insider.>,
-  "tags": <array of exactly 5 short tags (2-4 words each) describing what this person actually tweets about>
+  "analysis": <2-3 sentences, playful CT-flavored. Reference specific Arbitrum topics you saw if any. If no Arbitrum tweets, roast them gently for being a normie.>,
+  "tags": <array of exactly 5 short tags (2-4 words each) describing what this person tweets about>
 }`;
 
         const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
