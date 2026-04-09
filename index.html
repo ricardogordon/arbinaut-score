@@ -855,7 +855,7 @@ document.getElementById('arb-pct').innerHTML = '';
       else if (result.score >= 200) pill.classList.add('rank-mid');
       else pill.classList.add('rank-low');
 
-      document.getElementById('tweet-count-note').textContent = `Based on ${tweetCount} tweets analyzed`;
+      document.getElementById('tweet-count-note').textContent = '';
       document.getElementById('analysis-text').textContent = result.analysis;
 
       const tagsRow = document.getElementById('tags-row');
