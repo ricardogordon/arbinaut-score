@@ -717,12 +717,32 @@
         else if (recentArbTweets >= 3) jsScore += 120;
         else if (recentArbTweets >= 1) jsScore += 60;
 
+        // Handle name bonus
+        const lowerHandle = handle.toLowerCase();
+        const arbHandleKeywords = ['arbitrum', 'arb', 'nitro', 'stylus', 'orbit', 'offchain'];
+        const ethHandleKeywords = ['eth', 'defi', 'degen', 'dao', 'onchain', 'web3', 'l2'];
+        if (arbHandleKeywords.some(k => lowerHandle.includes(k))) jsScore += 30;
+        else if (ethHandleKeywords.some(k => lowerHandle.includes(k))) jsScore += 15;
+
+        // Twitter name emoji bonus (from bio/profile data)
+        const displayName = (userInfo.name || '').toLowerCase();
+        const hasBlueHeart = displayName.includes('💙') || bio.includes('💙');
+        const hasOrangeHeart = displayName.includes('🧡') || bio.includes('🧡');
+        if (hasBlueHeart && hasOrangeHeart) jsScore += 10;
+        else if (hasBlueHeart || hasOrangeHeart) jsScore += 5;
+
         // Cap at 1450
-        jsScore = Math.max(0, Math.min(1450, jsScore));
+        jsScore = Math.min(1450, jsScore);
 
         // Add small unique offset based on handle (deterministic per handle, ±20 pts)
         const handleHash = handle.split('').reduce((a, c) => a + c.charCodeAt(0), 0);
-        jsScore = Math.max(0, Math.min(1450, jsScore + (handleHash % 41) - 20));
+        jsScore = Math.min(1450, jsScore + (handleHash % 41) - 20);
+
+        // Floor at 1
+        jsScore = Math.max(1, jsScore);
+
+        // No round numbers — if ends in 0, add 1
+        if (jsScore % 10 === 0) jsScore += 1;
 
         // Rank from score
         function getrank(s) {
