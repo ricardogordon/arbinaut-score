@@ -660,12 +660,24 @@
           .filter(t => t.text.length > 5);
 
         const tweetCount = allTweetTexts.length;
-        const arbCount = arbTweetTexts.length;
+
+        // Find the date window of the general tweets
+        const allDates = allTweetTexts
+          .map(t => t.date ? new Date(t.date) : null)
+          .filter(d => d && !isNaN(d));
+        const oldestGeneralTweet = allDates.length > 0 ? new Date(Math.min(...allDates)) : null;
+
+        // Only count Arbitrum tweets that fall within the same time window
+        const arbTweetsInWindow = oldestGeneralTweet
+          ? arbTweetTexts.filter(t => t.date && new Date(t.date) >= oldestGeneralTweet)
+          : arbTweetTexts;
+
+        const arbCount = arbTweetsInWindow.length;
         const rawPct = tweetCount > 0 ? Math.min(100, Math.round((arbCount / tweetCount) * 100)) : 0;
 
-        // Recency: how many Arbitrum tweets in last 7 days
+        // Recency: how many Arbitrum tweets in last 7 days (from window)
         const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-        const recentArbTweets = arbTweetTexts.filter(t => {
+        const recentArbTweets = arbTweetsInWindow.filter(t => {
           if (!t.date) return false;
           return new Date(t.date) > sevenDaysAgo;
         }).length;
@@ -691,8 +703,8 @@
           ? allTweetTexts.map((t, i) => `${i + 1}. ${t.text}`).join('\n')
           : '(no recent tweets found)';
 
-        const arbBlock = arbTweetTexts.length > 0
-          ? arbTweetTexts.map((t, i) => `${i + 1}. ${t.text}`).join('\n')
+        const arbBlock = arbTweetsInWindow.length > 0
+          ? arbTweetsInWindow.map((t, i) => `${i + 1}. ${t.text}`).join('\n')
           : '(none)';
 
         // ── STEP 2: Calculate score in JS (deterministic, no AI variance) ──
