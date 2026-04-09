@@ -845,8 +845,7 @@ Return ONLY valid JSON, no markdown:
         document.getElementById('progress-fill').style.width = (result.score / 15) + '%';
       }, 80);
 
-      document.getElementById('arb-pct').innerHTML =
-        `<strong>${result.arb_percentage > 0 ? Math.round(result.arb_percentage * tweetCount / 100) : 0}</strong> out of your last ${tweetCount} tweets mention Arbitrum`;
+document.getElementById('arb-pct').innerHTML = '';
 
       const pill = document.getElementById('rank-pill');
       pill.textContent = result.rank;
@@ -880,8 +879,7 @@ Return ONLY valid JSON, no markdown:
       document.getElementById('sc-handle').textContent = '@' + currentHandle;
       document.getElementById('sc-rank').textContent = result.rank;
       document.getElementById('sc-score').textContent = result.score;
-      const arbMentionCount = result.arb_percentage > 0 ? Math.round(result.arb_percentage * tweetCount / 100) : 0;
-      document.getElementById('sc-pct').textContent = arbMentionCount + ' out of last ' + tweetCount + ' tweets mention Arbitrum';
+document.getElementById('sc-pct').textContent = '';
       document.getElementById('sc-bar').style.width = (result.score / 15) + '%';
       document.getElementById('sc-analysis').textContent = result.analysis;
       const scTags = document.getElementById('sc-tags');
