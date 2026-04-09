@@ -709,7 +709,7 @@ RANK (pick EXACTLY one based on final score):
 ANALYSIS STYLE: Write like a CT degen — playful, punchy, a little savage. Reference their actual tweets and bio. Roast normies. Hype up maxis. No corporate language, no "it's worth noting". Sound like someone who lives on CT.
 
 Return ONLY valid JSON, no markdown:
-{"arb_percentage":<0-100>,"score":<integer, no round numbers>,"rank":<EXACT rank string from list above, not a number>,"analysis":<2-3 sentences, CT degen tone, specific to this person>,"tags":<array of 5 short tags>}`
+{"arb_percentage":<0-100>,"score":<integer, no round numbers>,"rank":<EXACT rank string from list above, not a number>,"analysis":<2-3 sentences, CT degen tone, specific to this person>,"tags":<array of 5 short tags, make them fun and specific to this person — e.g. "ARB governance nerd", "Stylus early adopter", "price action tourist", "DAO vote skipper", "onchain daily grinder". Never generic like just "Crypto" or "Web3". Roast or hype based on their actual activity>}`
 
         async function callGroq(prompt, retries = 2) {
           for (let i = 0; i <= retries; i++) {
