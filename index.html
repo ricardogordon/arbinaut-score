@@ -695,38 +695,67 @@
           ? arbTweetTexts.map((t, i) => `${i + 1}. ${t.text}`).join('\n')
           : '(none)';
 
-        // Pre-compute base score using exponential curve (stricter than linear)
+        // ── STEP 2: Calculate score in JS (deterministic, no AI variance) ──
         const baseScore = Math.round(Math.pow(rawPct / 100, 1.5) * 1000);
 
-        const prompt = `You are scoring @${handle} as an Arbitrum ecosystem degen (0-1000).
+        let jsScore = baseScore;
 
-DATA:
-- Total tweets: ${tweetCount} | Arbitrum tweets: ${arbCount} (${rawPct}%)
-- Base score: ${baseScore} | Arb tweets last 7 days: ${recentArbTweets}
-- Days since most recent Arbitrum tweet: ${daysSinceLastArbTweet} days (last arb tweet: ${lastArbTweetStr})
-- Bio Arbitrum keywords: ${bioMentionsArb ? 'YES: ' + bioArbWords.join(', ') : 'NO'}
+        // Penalties
+        if (arbCount < 3) jsScore -= 200;
+        else if (arbCount < 6) jsScore -= 100;
+
+        if (daysSinceLastArbTweet > 180) jsScore -= 1150;
+        else if (daysSinceLastArbTweet > 120) jsScore -= 550;
+        else if (daysSinceLastArbTweet > 60) jsScore -= 150;
+
+        if (!bioMentionsArb) jsScore -= 50;
+
+        // Bonuses
+        if (bioMentionsArb) jsScore += 100;
+        if (recentArbTweets >= 6) jsScore += 150;
+        else if (recentArbTweets >= 3) jsScore += 100;
+        else if (recentArbTweets >= 1) jsScore += 50;
+
+        // Cap
+        jsScore = Math.max(0, Math.min(1000, jsScore));
+
+        // Add small unique offset based on handle to avoid identical scores
+        // (deterministic per handle, ±15 pts)
+        const handleHash = handle.split('').reduce((a, c) => a + c.charCodeAt(0), 0);
+        jsScore = Math.max(0, Math.min(1000, jsScore + (handleHash % 31) - 15));
+
+        // Rank from score
+        function getrank(s) {
+          if (s >= 900) return 'Arbitrum Maxi';
+          if (s >= 800) return 'Full Degen';
+          if (s >= 700) return 'Arbinaut OG';
+          if (s >= 600) return 'Arbinaut';
+          if (s >= 500) return 'Arbinaut Apprentice';
+          if (s >= 400) return 'L2 Curious';
+          if (s >= 300) return 'ETH Enjoyer';
+          if (s >= 200) return 'Degen-in-training';
+          if (s >= 100) return 'Lurker';
+          return 'Normie';
+        }
+
+        const jsRank = getrank(jsScore);
+
+        // ── AI only writes analysis + tags ────────────────────────────────
+        const prompt = `You are writing a CT-style roast/hype for @${handle}'s Arbitrum score card.
+
+THEIR DATA:
+- Score: ${jsScore}/1000 | Rank: ${jsRank}
+- ${rawPct}% of recent tweets mention Arbitrum (${arbCount} out of ${tweetCount})
+- Days since last Arbitrum tweet: ${daysSinceLastArbTweet}
+- Bio has Arbitrum keywords: ${bioMentionsArb ? 'YES (' + bioArbWords.join(', ') + ')' : 'NO'}
 - Bio: "${bio || 'none'}"
 - Recent tweets: ${allBlock}
 - Arbitrum tweets: ${arbBlock}
 
-SCORING:
-1. Start: ${baseScore}
-2. Penalties: <3 arb tweets:-200 | 3-5:-100 | arb tweet >30d old:-300 | >90d:-500 extra | >180d:-200 extra | price/moon only:-200 | mostly price:-100 | no arb bio:-50
-   CRITICAL: Use the exact "Days since most recent Arbitrum tweet" number provided above.
-   >180 days: all three penalties stack = −1000 total → score near 0.
-   >90 days: first two penalties = −800 total.
-   >30 days: first penalty = −300.
-   DO NOT rely on tweet content to guess recency — use the days value.
-3. Bonuses: arb bio:+100 | 1-2 arb/7d:+50 | 3-5:+100 | 6+:+150 | deep content:+150 | varied topics:+75
-4. Cap 0-1000. No round numbers.
-
-RANK (pick EXACTLY one based on final score):
-0-99:"Normie" | 100-199:"Lurker" | 200-299:"Degen-in-training" | 300-399:"ETH Enjoyer" | 400-499:"L2 Curious" | 500-599:"Arbinaut Apprentice" | 600-699:"Arbinaut" | 700-799:"Arbinaut OG" | 800-899:"Full Degen" | 900-1000:"Arbitrum Maxi"
-
-ANALYSIS STYLE: Write like a CT degen — playful, punchy, a little savage. Reference their actual tweets and bio. Roast normies. Hype up maxis. No corporate language, no "it's worth noting". Sound like someone who lives on CT.
+Write like a CT degen — playful, punchy, a little savage. Reference their actual tweets/bio. Roast normies. Hype up maxis. No corporate language ever.
 
 Return ONLY valid JSON, no markdown:
-{"arb_percentage":<0-100>,"score":<integer, no round numbers>,"rank":<EXACT rank string from list above, not a number>,"analysis":<2-3 sentences, CT degen tone, specific to this person>,"tags":<array of 5 short tags, make them fun and specific to this person — e.g. "ARB governance nerd", "Stylus early adopter", "price action tourist", "DAO vote skipper", "onchain daily grinder". Never generic like just "Crypto" or "Web3". Roast or hype based on their actual activity>}`
+{"analysis":<2-3 sentences CT degen tone, specific to this person>,"tags":<array of 5 fun specific tags e.g. "ARB governance nerd","Stylus early adopter","price action tourist" — never generic like "Crypto" or "Web3">}`
 
         async function callGroq(prompt, retries = 2) {
           for (let i = 0; i <= retries; i++) {
@@ -755,7 +784,16 @@ Return ONLY valid JSON, no markdown:
         const groqData = await groqRes.json();
         const rawText = groqData.choices[0].message.content;
         const clean = rawText.replace(/```json|```/g, '').trim();
-        const result = JSON.parse(clean);
+        const aiResult = JSON.parse(clean);
+
+        // Merge JS-calculated score with AI-written analysis
+        const result = {
+          score: jsScore,
+          arb_percentage: rawPct,
+          rank: jsRank,
+          analysis: aiResult.analysis || '',
+          tags: aiResult.tags || []
+        };
 
         setStep('analyze', 'done');
         setStep('score', 'active');
