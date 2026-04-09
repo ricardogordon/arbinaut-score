@@ -523,7 +523,7 @@
               <div class="sc-rank-name" id="sc-rank"></div>
               <div class="sc-score-row">
                 <div class="sc-score-big" id="sc-score"></div>
-                <div class="sc-score-max">/1000</div>
+                <div class="sc-score-max">/1500</div>
               </div>
               <div class="sc-pct" id="sc-pct"></div>
               <div class="sc-bar-track"><div class="sc-bar-fill" id="sc-bar"></div></div>
@@ -696,45 +696,45 @@
           : '(none)';
 
         // ── STEP 2: Calculate score in JS (deterministic, no AI variance) ──
-        const baseScore = Math.round(Math.pow(rawPct / 100, 1.5) * 1000);
+        // Base uses exponential curve scaled to 1200 max
+        const baseScore = Math.round(Math.pow(rawPct / 100, 1.5) * 1200);
 
         let jsScore = baseScore;
 
         // Penalties
-        if (arbCount < 3) jsScore -= 200;
-        else if (arbCount < 6) jsScore -= 100;
+        if (arbCount < 3) jsScore -= 250;
+        else if (arbCount < 6) jsScore -= 120;
 
-        if (daysSinceLastArbTweet > 180) jsScore -= 1150;
-        else if (daysSinceLastArbTweet > 120) jsScore -= 550;
-        else if (daysSinceLastArbTweet > 60) jsScore -= 150;
+        if (daysSinceLastArbTweet > 180) jsScore -= 1200;
+        else if (daysSinceLastArbTweet > 120) jsScore -= 600;
+        else if (daysSinceLastArbTweet > 60) jsScore -= 180;
 
-        if (!bioMentionsArb) jsScore -= 50;
+        if (!bioMentionsArb) jsScore -= 60;
 
         // Bonuses
-        if (bioMentionsArb) jsScore += 100;
-        if (recentArbTweets >= 6) jsScore += 150;
-        else if (recentArbTweets >= 3) jsScore += 100;
-        else if (recentArbTweets >= 1) jsScore += 50;
+        if (bioMentionsArb) jsScore += 120;
+        if (recentArbTweets >= 6) jsScore += 180;
+        else if (recentArbTweets >= 3) jsScore += 120;
+        else if (recentArbTweets >= 1) jsScore += 60;
 
-        // Cap
-        jsScore = Math.max(0, Math.min(1000, jsScore));
+        // Cap at 1450
+        jsScore = Math.max(0, Math.min(1450, jsScore));
 
-        // Add small unique offset based on handle to avoid identical scores
-        // (deterministic per handle, ±15 pts)
+        // Add small unique offset based on handle (deterministic per handle, ±20 pts)
         const handleHash = handle.split('').reduce((a, c) => a + c.charCodeAt(0), 0);
-        jsScore = Math.max(0, Math.min(1000, jsScore + (handleHash % 31) - 15));
+        jsScore = Math.max(0, Math.min(1450, jsScore + (handleHash % 41) - 20));
 
         // Rank from score
         function getrank(s) {
-          if (s >= 900) return 'Arbitrum Maxi';
-          if (s >= 800) return 'Full Degen';
-          if (s >= 700) return 'Arbinaut OG';
-          if (s >= 600) return 'Arbinaut';
-          if (s >= 500) return 'Arbinaut Apprentice';
-          if (s >= 400) return 'L2 Curious';
-          if (s >= 300) return 'ETH Enjoyer';
-          if (s >= 200) return 'Degen-in-training';
-          if (s >= 100) return 'Lurker';
+          if (s >= 1300) return 'Arbitrum Maxi';
+          if (s >= 1100) return 'Full Degen';
+          if (s >= 900)  return 'Arbinaut OG';
+          if (s >= 750)  return 'Arbinaut';
+          if (s >= 600)  return 'Arbinaut Apprentice';
+          if (s >= 450)  return 'L2 Curious';
+          if (s >= 300)  return 'ETH Enjoyer';
+          if (s >= 180)  return 'Degen-in-training';
+          if (s >= 80)   return 'Lurker';
           return 'Normie';
         }
 
@@ -744,7 +744,7 @@
         const prompt = `You are writing a CT-style roast/hype for @${handle}'s Arbitrum score card.
 
 THEIR DATA:
-- Score: ${jsScore}/1000 | Rank: ${jsRank}
+- Score: ${jsScore}/1500 | Rank: ${jsRank}
 - ${rawPct}% of recent tweets mention Arbitrum (${arbCount} out of ${tweetCount})
 - Days since last Arbitrum tweet: ${daysSinceLastArbTweet}
 - Bio has Arbitrum keywords: ${bioMentionsArb ? 'YES (' + bioArbWords.join(', ') + ')' : 'NO'}
@@ -820,7 +820,7 @@ Return ONLY valid JSON, no markdown:
       animateScore(result.score);
 
       setTimeout(() => {
-        document.getElementById('progress-fill').style.width = (result.score / 10) + '%';
+        document.getElementById('progress-fill').style.width = (result.score / 15) + '%';
       }, 80);
 
       document.getElementById('arb-pct').innerHTML =
@@ -859,7 +859,7 @@ Return ONLY valid JSON, no markdown:
       document.getElementById('sc-rank').textContent = result.rank;
       document.getElementById('sc-score').textContent = result.score;
       document.getElementById('sc-pct').textContent = result.arb_percentage + '% of tweets mention Arbitrum';
-      document.getElementById('sc-bar').style.width = (result.score / 10) + '%';
+      document.getElementById('sc-bar').style.width = (result.score / 15) + '%';
       document.getElementById('sc-analysis').textContent = result.analysis;
       const scTags = document.getElementById('sc-tags');
       scTags.innerHTML = '';
@@ -873,7 +873,7 @@ Return ONLY valid JSON, no markdown:
     }
 
     function buildTweetText(result) {
-      return `Just checked my Arbinaut score!\n\n🔵 Score: ${result.score}/1000\n💪 Rank: ${result.rank}\n\nCheck yours: https://arbinaut-score.vercel.app/ by @Ricardo__Gordon 👇`;
+      return `Just checked my Arbinaut score!\n\n🔵 Score: ${result.score}/1500\n💪 Rank: ${result.rank}\n\nCheck yours: https://arbinaut-score.vercel.app/ by @Ricardo__Gordon 👇`;
     }
 
 
@@ -922,7 +922,7 @@ Return ONLY valid JSON, no markdown:
       function step(now) {
         const t = Math.min((now - start) / 1400, 1);
         const eased = 1 - Math.pow(1 - t, 4);
-        el.innerHTML = Math.round(eased * target) + '<span>/1000</span>';
+        el.innerHTML = Math.round(eased * target) + '<span>/1500</span>';
         if (t < 1) requestAnimationFrame(step);
       }
       requestAnimationFrame(step);
