@@ -670,6 +670,18 @@
           return new Date(t.date) > sevenDaysAgo;
         }).length;
 
+        // Calculate how many days since the most recent Arbitrum tweet
+        const arbDates = arbTweetTexts
+          .map(t => t.date ? new Date(t.date) : null)
+          .filter(d => d && !isNaN(d));
+        const mostRecentArbDate = arbDates.length > 0 ? new Date(Math.max(...arbDates)) : null;
+        const daysSinceLastArbTweet = mostRecentArbDate
+          ? Math.floor((Date.now() - mostRecentArbDate) / (1000 * 60 * 60 * 24))
+          : 999;
+        const lastArbTweetStr = mostRecentArbDate
+          ? mostRecentArbDate.toDateString()
+          : 'unknown';
+
         setStep('scrape', 'done');
 
         // ── STEP 2: Analyze with Groq ─────────────────────────────────────
@@ -691,6 +703,7 @@
 DATA:
 - Total tweets: ${tweetCount} | Arbitrum tweets: ${arbCount} (${rawPct}%)
 - Base score: ${baseScore} | Arb tweets last 7 days: ${recentArbTweets}
+- Days since most recent Arbitrum tweet: ${daysSinceLastArbTweet} days (last arb tweet: ${lastArbTweetStr})
 - Bio Arbitrum keywords: ${bioMentionsArb ? 'YES: ' + bioArbWords.join(', ') : 'NO'}
 - Bio: "${bio || 'none'}"
 - Recent tweets: ${allBlock}
@@ -699,7 +712,11 @@ DATA:
 SCORING:
 1. Start: ${baseScore}
 2. Penalties: <3 arb tweets:-200 | 3-5:-100 | arb tweet >30d old:-300 | >90d:-500 extra | >180d:-200 extra | price/moon only:-200 | mostly price:-100 | no arb bio:-50
-   CRITICAL: Old tweets = big penalty. Last arb tweet 7mo ago = near zero score.
+   CRITICAL: Use the exact "Days since most recent Arbitrum tweet" number provided above.
+   >180 days: all three penalties stack = −1000 total → score near 0.
+   >90 days: first two penalties = −800 total.
+   >30 days: first penalty = −300.
+   DO NOT rely on tweet content to guess recency — use the days value.
 3. Bonuses: arb bio:+100 | 1-2 arb/7d:+50 | 3-5:+100 | 6+:+150 | deep content:+150 | varied topics:+75
 4. Cap 0-1000. No round numbers.
 
